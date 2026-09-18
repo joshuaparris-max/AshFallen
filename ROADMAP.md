@@ -15,6 +15,10 @@ Every milestone should leave its implementation understandable and demonstrably 
 
 The current **Josh OS Boot Manager** is the branded Limine menu and remains a useful reference path. The long-term pre-kernel menu belongs in JoshBootloader once it can boot this canonical kernel reliably.
 
+## First physical validation target
+
+The first selected machine is **DadLAN Laptop #10, a Compaq 610**. It is a development target, not yet a supported Josh OS machine. Machine-specific inventory, firmware safety gates and the evidence ladder are maintained in [JoshBIOS's Compaq 610 target document](https://github.com/Parris-Tech-Services/JoshBIOS/blob/main/docs/HARDWARE_TARGET_COMPAQ_610.md). Native-kernel work should use this concrete machine to expose real assumptions while keeping drivers and platform quirks behind generic subsystem boundaries.
+
 ## Native kernel 0.1 — It lives
 
 - [x] x86-64 kernel entry point
@@ -27,7 +31,7 @@ The current **Josh OS Boot Manager** is the branded Limine menu and remains a us
 - [x] serial boot marker for automated testing
 - [x] GitHub Actions ISO build + QEMU smoke test
 - [ ] publish downloadable ISO from tagged releases
-- [ ] test on physical hardware through Ventoy
+- [ ] boot-test the native ISO on the first selected physical target — DadLAN Laptop #10 / Compaq 610 — from removable media, then record repeatability and limitations
 
 ## Product track 0.1 — Define the desktop
 
