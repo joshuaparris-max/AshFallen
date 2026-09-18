@@ -4,7 +4,7 @@ set -euo pipefail
 iso="${1:?usage: smoke-product-browser.sh <josh-os.iso> [data-image]}"
 data_image="${2:-browser-persistence-test.img}"
 qemu="${QEMU:-qemu-system-x86_64}"
-timeout_seconds="${BROWSER_SMOKE_TIMEOUT:-120}"
+timeout_seconds="${BROWSER_SMOKE_TIMEOUT:-210}"
 
 command -v "$qemu" >/dev/null
 command -v mkfs.ext4 >/dev/null
@@ -32,10 +32,11 @@ run_boot() {
 
   for _ in $(seq 1 "$timeout_seconds"); do
     if grep -q 'JOSHOS_BROWSER_READY' "$log" 2>/dev/null &&
+       grep -q 'JOSHOS_NETWORK_READY' "$log" 2>/dev/null &&
        grep -q "$persistence_marker" "$log" 2>/dev/null; then
       cleanup
       trap - RETURN
-      echo "Product browser boot pass $pass succeeded ($persistence_marker)."
+      echo "Product browser + internet boot pass $pass succeeded ($persistence_marker)."
       return 0
     fi
     if ! kill -0 "$pid" >/dev/null 2>&1; then
@@ -55,4 +56,4 @@ run_boot() {
 run_boot 1 JOSHOS_BROWSER_PERSISTENCE_PRIMED
 run_boot 2 JOSHOS_BROWSER_PERSISTENCE_OK
 
-echo "Josh OS product browser two-boot persistence smoke test passed."
+echo "Josh OS product browser + internet two-boot persistence smoke test passed."
