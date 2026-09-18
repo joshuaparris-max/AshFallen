@@ -79,5 +79,7 @@ boot_status_t boot_limine_context_init(boot_context_t *context) {
     context->framebuffer.blue_mask_size = fb->blue_mask_size;
     context->framebuffer.blue_mask_shift = fb->blue_mask_shift;
     context->usable_memory_mib = usable_memory_mib();
+    context->rsdp_phys = 0;
+    context->smbios_phys = 0;
     return BOOT_OK;
 }
