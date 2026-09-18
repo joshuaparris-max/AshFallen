@@ -65,7 +65,8 @@ DEPS := $(OBJ:.o=.d)
 HOST_TEST_BOOT := obj-host/test_boot_josh
 HOST_TEST_PMM := obj-host/test_pmm
 HOST_TEST_CPU := obj-host/test_cpu
-HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU)
+HOST_TEST_HEAP := obj-host/test_heap
+HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP)
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -96,10 +97,15 @@ $(HOST_TEST_CPU): tests/test_cpu.c src/cpu.c src/cpu.h
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_cpu.c src/cpu.c -o $@
 
+$(HOST_TEST_HEAP): tests/test_heap.c src/heap.c src/heap.h src/boot.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_heap.c src/heap.c -o $@
+
 host-tests: $(HOST_TESTS)
 	$(HOST_TEST_BOOT)
 	$(HOST_TEST_PMM)
 	$(HOST_TEST_CPU)
+	$(HOST_TEST_HEAP)
 
 clean:
 	rm -rf bin obj obj-host
