@@ -14,6 +14,7 @@ typedef enum {
 } paging_status_t;
 
 paging_status_t paging_init(boot_context_t *boot);
+paging_status_t paging_map_page(uint64_t virtual_address, uint64_t physical_address);
 uint64_t paging_root_phys(void);
 void *paging_phys_to_virt(uint64_t physical_address);
 const char *paging_status_string(paging_status_t status);
