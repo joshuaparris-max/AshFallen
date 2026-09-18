@@ -17,6 +17,7 @@ static void halt_forever(void) {
 }
 
 static __attribute__((noreturn)) void kernel_after_paging(void) {
+    serial_write("JOSHOS_PAGING_OWNED_OK\n");
     gfx_init(&boot_context.framebuffer);
     desktop_layout_t layout = desktop_draw();
     shell_init(layout.terminal_x, layout.terminal_y, layout.terminal_w, layout.terminal_h,
