@@ -3,6 +3,9 @@
 #include <stddef.h>
 #include <stdint.h>
 
+extern char __kernel_start[];
+extern char __kernel_end[];
+
 __attribute__((used, section(".limine_requests")))
 static volatile uint64_t limine_base_revision[] = LIMINE_BASE_REVISION(6);
 
@@ -15,6 +18,30 @@ static volatile struct limine_framebuffer_request framebuffer_request = {
 __attribute__((used, section(".limine_requests")))
 static volatile struct limine_memmap_request memmap_request = {
     .id = LIMINE_MEMMAP_REQUEST_ID,
+    .revision = 0
+};
+
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_hhdm_request hhdm_request = {
+    .id = LIMINE_HHDM_REQUEST_ID,
+    .revision = 0
+};
+
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_executable_address_request executable_address_request = {
+    .id = LIMINE_EXECUTABLE_ADDRESS_REQUEST_ID,
+    .revision = 0
+};
+
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_rsdp_request rsdp_request = {
+    .id = LIMINE_RSDP_REQUEST_ID,
+    .revision = 0
+};
+
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_smbios_request smbios_request = {
+    .id = LIMINE_SMBIOS_REQUEST_ID,
     .revision = 0
 };
 
@@ -45,6 +72,13 @@ static int framebuffer_valid(const struct limine_framebuffer *fb) {
 
 static int add_overflows_u64(uint64_t a, uint64_t b) {
     return UINT64_MAX - a < b;
+}
+
+static uint64_t pointer_to_phys(const void *pointer, uint64_t hhdm_offset) {
+    if (!pointer) return 0;
+    uint64_t address = (uint64_t)(uintptr_t)pointer;
+    if (address < hhdm_offset) return 0;
+    return address - hhdm_offset;
 }
 
 static boot_status_t copy_memory_map(boot_context_t *context, uint64_t *usable_mib_out) {
@@ -93,6 +127,10 @@ boot_status_t boot_limine_context_init(boot_context_t *context) {
     if (!framebuffer_request.response || framebuffer_request.response->framebuffer_count < 1) {
         return BOOT_NO_FRAMEBUFFER;
     }
+    if (!hhdm_request.response || !executable_address_request.response) {
+        return BOOT_NO_PHYSICAL_MAP;
+    }
+
     struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
     if (!framebuffer_valid(fb)) return BOOT_UNSUPPORTED_FRAMEBUFFER;
 
@@ -111,7 +149,32 @@ boot_status_t boot_limine_context_init(boot_context_t *context) {
     boot_status_t memory_status = copy_memory_map(context, &context->usable_memory_mib);
     if (memory_status != BOOT_OK) return memory_status;
 
-    context->rsdp_phys = 0;
+    uint64_t kernel_size = (uint64_t)(uintptr_t)__kernel_end -
+                           (uint64_t)(uintptr_t)__kernel_start;
+    if (kernel_size == 0 ||
+        add_overflows_u64(executable_address_request.response->physical_base, kernel_size) ||
+        add_overflows_u64(executable_address_request.response->virtual_base, kernel_size)) {
+        return BOOT_INVALID_BOOT_INFO;
+    }
+
+    context->physical_memory_offset = hhdm_request.response->offset;
+    context->physical_memory_limit = BOOT_PHYSICAL_UNLIMITED;
+    context->kernel_phys_start = executable_address_request.response->physical_base;
+    context->kernel_phys_end = executable_address_request.response->physical_base + kernel_size;
+    context->kernel_virt_start = executable_address_request.response->virtual_base;
+    context->kernel_virt_end = executable_address_request.response->virtual_base + kernel_size;
+
+    context->rsdp_phys = rsdp_request.response
+        ? pointer_to_phys(rsdp_request.response->address, context->physical_memory_offset)
+        : 0;
+
     context->smbios_phys = 0;
+    if (smbios_request.response) {
+        const void *entry = smbios_request.response->entry_64
+            ? smbios_request.response->entry_64
+            : smbios_request.response->entry_32;
+        context->smbios_phys = pointer_to_phys(entry, context->physical_memory_offset);
+    }
+
     return BOOT_OK;
 }
