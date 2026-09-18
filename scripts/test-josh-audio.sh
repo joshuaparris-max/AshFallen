@@ -20,7 +20,7 @@ export JOSH_AUDIO_TEST_LOG="$tmp/calls"
 audio="$ROOT/iso/overlay/usr/local/bin/josh-audio"
 
 run_audio() {
-  bash run_audio "$@"
+  bash "$audio" "$@"
 }
 
 run_audio status >/dev/null
