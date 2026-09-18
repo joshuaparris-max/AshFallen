@@ -77,6 +77,16 @@ static __attribute__((noreturn)) void kernel_after_paging(void) {
     }
     serial_write("JOSHOS_NET_LOOPBACK_OK\n");
 
+    uint32_t net_device_id = 0;
+    e1000_status_t e1000_status = e1000_init(&net_device_id);
+    if (e1000_status != E1000_OK) {
+        serial_write("JOSHOS_ERROR_E1000_INIT\n");
+        serial_write(e1000_status_string(e1000_status));
+        serial_write("\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_E1000_OK\n");
+
     acpi_status_t acpi_status =
         acpi_kernel_discover(&boot_context, &platform_info);
     if (acpi_status != ACPI_OK) {
