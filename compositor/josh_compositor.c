@@ -68,6 +68,7 @@ struct josh_view {
     bool mapped;
     bool fullscreen;
 
+    struct wl_listener commit;
     struct wl_listener map;
     struct wl_listener unmap;
     struct wl_listener destroy;
@@ -639,6 +640,25 @@ static void handle_request_set_selection(
     wlr_seat_set_selection(server->seat, event->source, event->serial);
 }
 
+static void handle_view_commit(struct wl_listener *listener, void *data) {
+    (void)data;
+    struct josh_view *view = wl_container_of(listener, view, commit);
+
+    if (!view->toplevel->base->initial_commit) {
+        return;
+    }
+
+    wlr_xdg_toplevel_set_wm_capabilities(
+        view->toplevel,
+        WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MAXIMIZE |
+        WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN |
+        WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE);
+    wlr_xdg_toplevel_set_size(
+        view->toplevel,
+        view->state.geometry.width,
+        view->state.geometry.height);
+}
+
 static void handle_view_map(struct wl_listener *listener, void *data) {
     (void)data;
     struct josh_view *view = wl_container_of(listener, view, map);
@@ -671,6 +691,7 @@ static void handle_view_destroy(struct wl_listener *listener, void *data) {
     (void)data;
     struct josh_view *view = wl_container_of(listener, view, destroy);
 
+    wl_list_remove(&view->commit.link);
     wl_list_remove(&view->map.link);
     wl_list_remove(&view->unmap.link);
     wl_list_remove(&view->destroy.link);
@@ -794,6 +815,8 @@ static void handle_new_toplevel(struct wl_listener *listener, void *data) {
         view->state.geometry.y);
     wlr_scene_node_set_enabled(&view->scene_tree->node, false);
 
+    view->commit.notify = handle_view_commit;
+    wl_signal_add(&toplevel->base->surface->events.commit, &view->commit);
     view->map.notify = handle_view_map;
     wl_signal_add(&toplevel->base->surface->events.map, &view->map);
     view->unmap.notify = handle_view_unmap;
@@ -813,14 +836,6 @@ static void handle_new_toplevel(struct wl_listener *listener, void *data) {
     wl_signal_add(&toplevel->events.request_minimize, &view->request_minimize);
 
     wl_list_insert(&server->views, &view->link);
-
-    wlr_xdg_toplevel_set_wm_capabilities(
-        toplevel,
-        WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MAXIMIZE |
-        WLR_XDG_TOPLEVEL_WM_CAPABILITIES_FULLSCREEN |
-        WLR_XDG_TOPLEVEL_WM_CAPABILITIES_MINIMIZE);
-    wlr_xdg_toplevel_set_size(
-        toplevel, view->state.geometry.width, view->state.geometry.height);
 }
 
 static void handle_output_frame(struct wl_listener *listener, void *data) {
