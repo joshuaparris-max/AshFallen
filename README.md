@@ -144,6 +144,10 @@ The Stage 0 product ISO is intentionally a compatibility vehicle: ArchISO + Ligh
 ## Documentation
 
 - [Roadmap](ROADMAP.md)
+- [Power button → desktop roadmap](docs/POWER_ON_TO_DESKTOP_ROADMAP.md)
+- [Native kernel roadmap](docs/KERNEL_ROADMAP.md)
+- [Josh Boot Protocol roadmap](docs/BOOT_ABI.md)
+- [OS/start/recovery experience roadmap](docs/product/OS_EXPERIENCE_ROADMAP.md)
 - [Architecture](docs/ARCHITECTURE.md)
 - [Boot stack: power button to desktop](docs/BOOT_STACK.md)
 - [Product and architecture strategy](docs/PRODUCT_STRATEGY.md)
