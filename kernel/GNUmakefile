@@ -68,7 +68,10 @@ HOST_TEST_CPU := obj-host/test_cpu
 HOST_TEST_HEAP := obj-host/test_heap
 HOST_TEST_NET := obj-host/test_net_proto
 HOST_TEST_NETDEV := obj-host/test_net
-HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET) $(HOST_TEST_NETDEV)
+HOST_TEST_STORAGE := obj-host/test_storage
+HOST_TEST_VFS := obj-host/test_vfs
+HOST_TEST_PCI := obj-host/test_pci
+HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET) $(HOST_TEST_NETDEV) $(HOST_TEST_STORAGE) $(HOST_TEST_VFS) $(HOST_TEST_PCI)
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -111,6 +114,18 @@ $(HOST_TEST_NETDEV): tests/test_net.c src/net.c src/net.h
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_net.c src/net.c -o $@
 
+$(HOST_TEST_STORAGE): tests/test_storage.c src/block.c src/block.h src/block_cache.c src/block_cache.h src/partition.c src/partition.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_storage.c src/block.c src/block_cache.c src/partition.c -o $@
+
+$(HOST_TEST_VFS): tests/test_vfs.c src/vfs.c src/vfs.h src/tmpfs.c src/tmpfs.h src/storage_services.c src/storage_services.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_vfs.c src/vfs.c src/tmpfs.c src/storage_services.c -o $@
+
+$(HOST_TEST_PCI): tests/test_pci.c src/pci.c src/pci.h src/io.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_pci.c src/pci.c -o $@
+
 host-tests: $(HOST_TESTS)
 	$(HOST_TEST_BOOT)
 	$(HOST_TEST_PMM)
@@ -118,6 +133,9 @@ host-tests: $(HOST_TESTS)
 	$(HOST_TEST_HEAP)
 	$(HOST_TEST_NET)
 	$(HOST_TEST_NETDEV)
+	$(HOST_TEST_STORAGE)
+	$(HOST_TEST_VFS)
+	$(HOST_TEST_PCI)
 
 clean:
 	rm -rf bin obj obj-host
