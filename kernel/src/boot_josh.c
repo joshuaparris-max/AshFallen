@@ -160,6 +160,10 @@ boot_status_t boot_josh_context_init(boot_context_t *context, const JoshBootInfo
     context->framebuffer.blue_mask_size = (uint8_t)info->framebuffer.blue_mask_size;
     context->framebuffer.blue_mask_shift = (uint8_t)info->framebuffer.blue_mask_shift;
     context->usable_memory_mib = usable_bytes / (1024u * 1024u);
+    context->framebuffer_phys_start = info->framebuffer.address;
+    context->framebuffer_phys_end =
+        info->framebuffer.address +
+        (uint64_t)info->framebuffer.pitch * (uint64_t)info->framebuffer.height;
     context->physical_memory_offset = 0;
     context->physical_memory_limit = FOUR_GIB;
     context->kernel_phys_start = info->kernel_phys_start;
