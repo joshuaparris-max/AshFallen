@@ -51,7 +51,14 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
 
 #ifdef JOSHOS_FAULT_TEST_UD2
     serial_write("JOSHOS_FAULT_TEST_UD2\n");
-    __asm__ volatile ("ud2");
+    __asm__ volatile (
+        "movabs $0x1122334455667788, %%rax\n\t"
+        "movabs $0x8877665544332211, %%r15\n\t"
+        "ud2"
+        :
+        :
+        : "rax", "r15", "memory"
+    );
 #endif
 
 #ifdef JOSHOS_FAULT_TEST_DOUBLE_FAULT
