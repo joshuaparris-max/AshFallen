@@ -13,6 +13,7 @@ typedef enum {
 } paging_status_t;
 
 paging_status_t paging_init(const boot_context_t *boot, uint64_t *root_phys_out);
+paging_status_t paging_map_mmio(uint64_t physical_address, uint64_t length, void **virtual_out);
 __attribute__((noreturn))
 void paging_activate(uint64_t root_phys, void (*continuation)(void));
 const char *paging_status_string(paging_status_t status);
