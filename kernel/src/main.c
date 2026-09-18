@@ -1,4 +1,8 @@
 #include <stdint.h>
+#include "timer.h"
+#include "input.h"
+#include "apic.h"
+#include "acpi.h"
 #include "boot.h"
 #include "cpu.h"
 #include "desktop.h"
@@ -16,6 +20,8 @@
 #include "shell.h"
 
 static boot_context_t boot_context;
+static cpu_features_t cpu_features;
+static acpi_platform_info_t platform_info;
 
 static void halt_forever(void) {
     for (;;) __asm__ volatile ("hlt");
@@ -70,17 +76,91 @@ static __attribute__((noreturn)) void kernel_after_paging(void) {
     }
     serial_write("JOSHOS_NET_LOOPBACK_OK\n");
 
+    acpi_status_t acpi_status =
+        acpi_kernel_discover(&boot_context, &platform_info);
+    if (acpi_status != ACPI_OK) {
+        serial_write("JOSHOS_ERROR_ACPI_MADT\n");
+        serial_write(acpi_status_string(acpi_status));
+        serial_write("\n");
+        halt_forever();
+    }
+    if (platform_info.cpu_count == 0 ||
+        platform_info.ioapic_count == 0) {
+        serial_write("JOSHOS_ERROR_ACPI_TOPOLOGY\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_ACPI_MADT_OK\n");
+
+    apic_status_t apic_status =
+        apic_init(&platform_info, &cpu_features);
+    if (apic_status != APIC_OK) {
+        serial_write("JOSHOS_ERROR_APIC_INIT\n");
+        serial_write(apic_status_string(apic_status));
+        serial_write("\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_APIC_OK\n");
+    serial_write("JOSHOS_IOAPIC_OK\n");
+
+    input_reset();
+
+    timer_status_t timer_status = timer_init(100);
+    if (timer_status != TIMER_OK) {
+        serial_write("JOSHOS_ERROR_TIMER_INIT\n");
+        serial_write(timer_status_string(timer_status));
+        serial_write("\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_TIMER_CONFIG_OK\n");
+
+    keyboard_status_t keyboard_status = keyboard_init();
+    if (keyboard_status != KEYBOARD_OK) {
+        serial_write("JOSHOS_ERROR_KEYBOARD_INIT\n");
+        serial_write(keyboard_status_string(keyboard_status));
+        serial_write("\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_KEYBOARD_IRQ_CONFIG_OK\n");
+
     gfx_init(&boot_context.framebuffer);
     desktop_layout_t layout = desktop_draw();
     shell_init(layout.terminal_x, layout.terminal_y, layout.terminal_w, layout.terminal_h,
                boot_context.usable_memory_mib);
 
+    interrupts_enable();
+
+    uint64_t timer_before = timer_ticks();
+    if (!timer_sleep_ms(30)) {
+        serial_write("JOSHOS_ERROR_TIMER_SLEEP\n");
+        halt_forever();
+    }
+    uint64_t timer_after = timer_ticks();
+    if (timer_after <= timer_before ||
+        timer_now_ns() == 0 ||
+        timer_frequency_hz() == 0) {
+        serial_write("JOSHOS_ERROR_TIMER_IRQ\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_TIMER_IRQ_OK\n");
+    serial_write("JOSHOS_INTERRUPT_INPUT_READY\n");
+
     serial_write("JOSHOS_BOOT_OK\n");
 
     for (;;) {
-        char key = keyboard_poll();
-        if (key) shell_handle_key(key);
-        __asm__ volatile ("pause");
+        input_event_t event;
+        int handled = 0;
+        while (input_pop(&event)) {
+            handled = 1;
+            if (event.type == INPUT_EVENT_KEY &&
+                event.pressed &&
+                event.character != 0) {
+                shell_handle_key(event.character);
+            }
+        }
+
+        if (!handled) {
+            __asm__ volatile ("hlt");
+        }
     }
 }
 
@@ -115,14 +195,14 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
     serial_init();
     serial_write("JOSHOS_KERNEL_ENTERED\n");
 
-    cpu_features_t cpu = cpu_detect();
-    if (!cpu_required_features_present(&cpu)) {
+    cpu_features = cpu_detect();
+    if (!cpu_required_features_present(&cpu_features)) {
         serial_write("JOSHOS_ERROR_CPU_FEATURES\n");
         halt_forever();
     }
     serial_write("JOSHOS_CPU_FEATURES_OK\n");
 
-    if (!cpu_enable_nx(&cpu)) {
+    if (!cpu_enable_nx(&cpu_features)) {
         serial_write("JOSHOS_ERROR_NX_ENABLE\n");
         halt_forever();
     }
