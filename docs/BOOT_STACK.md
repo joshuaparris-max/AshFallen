@@ -2,25 +2,41 @@
 
 Josh OS treats boot as a chain of explicit contracts rather than one mysterious blob.
 
-## Current native Josh OS path
+## Current native Josh OS paths
+
+The canonical kernel has two verified QEMU boot paths:
 
 ```text
-Power button
+reference path:
+BIOS / UEFI
     ↓
-PC firmware (BIOS or UEFI)
+Limine 12.9
     ↓
-Limine 12.9 boot manager
-    ↓
-Limine protocol adapter (kernel/src/boot_limine.c)
+kernel/src/boot_limine.c
     ↓
 Josh-owned boot_context_t
     ↓
 Josh kernel
+
+legacy-BIOS Josh-owned path:
+SeaBIOS
     ↓
-framebuffer desktop + shell
+Josh Stage 1
+    ↓
+JoshBootloader Stage 2
+    ↓
+MBR → FAT32 → /BOOT/JOSH/KERNEL.ELF
+    ↓
+ELF64 load → x86-64 long mode
+    ↓
+Josh Boot Protocol v0
+    ↓
+kernel/src/boot_josh.c
+    ↓
+the same Josh kernel
 ```
 
-The Limine menu is intentionally visible for three seconds and branded **Josh OS Boot Manager**. There is only one native entry today because recovery/safe-mode entries should not be shown until they do something real.
+Both reach the kernel's `JOSHOS_BOOT_OK` marker in QEMU. Limine remains the independent reference path while JoshBootloader gains UEFI parity and physical-hardware evidence.
 
 ## Why the new boot adapter matters
 
@@ -49,7 +65,7 @@ The goal is **not** to fork the kernel for each bootloader. Boot protocols are a
 
 On 18 September 2026, the JoshBIOS repository gained a tested x86-64 UEFI entry scaffold. Its `BOOTX64.EFI` is built into a FAT removable-media image and exercised under QEMU/OVMF; the smoke test requires the `JOSHUEFI_ENTRY_OK` serial marker.
 
-AshFallen itself is unchanged at the boot boundary: **Limine remains the only integrated native-kernel boot path**. The JoshBIOS UEFI scaffold does not yet load this kernel, construct the full Josh Boot Protocol or call a Josh-specific kernel entry adapter.
+That UEFI path still does **not** load AshFallen. The integrated JoshBootloader path is currently legacy BIOS only; UEFI still needs GOP, UEFI memory-map capture, `ExitBootServices`, filesystem/kernel loading and the Josh Boot Protocol hand-off.
 
 ## From the power button to the desktop
 
@@ -69,15 +85,14 @@ A mature path needs all of these layers:
 
 ## Near-term convergence contract
 
-The JoshBIOS repository is defining `JoshBootInfo`. Before replacing Limine for the native path it needs to provide, at minimum:
+The experimental Josh Boot Protocol v0 path now provides enough information to boot the canonical kernel through legacy BIOS in QEMU. Before JoshBootloader can replace Limine as a comparably reliable general path, it still needs to harden and broaden:
 
-- x86-64 ELF loading;
-- memory map;
-- framebuffer description;
-- ACPI/SMBIOS pointers;
-- boot-device identity;
+- ACPI/SMBIOS integration assertions;
+- boot-device identity beyond the current BIOS drive number;
 - command line / boot mode;
-- loaded modules;
-- version/feature fields.
+- loaded modules/initrd;
+- typed failure/recovery paths;
+- UEFI parity;
+- physical-hardware validation.
 
-Once that exists, AshFallen can add a `boot_josh.c` adapter beside `boot_limine.c` and run the same kernel through either loader while the transition is tested.
+AshFallen already has `boot_josh.c` beside `boot_limine.c`, and CI proves the same kernel reaches `JOSHOS_BOOT_OK` through either the Limine reference path or the legacy-BIOS JoshBootloader path.
