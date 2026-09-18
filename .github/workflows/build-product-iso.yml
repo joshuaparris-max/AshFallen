@@ -24,6 +24,7 @@ jobs:
       - name: Validate product scripts
         run: |
           bash -n scripts/build-iso.sh
+          bash -n scripts/check-network-platform.sh
           bash -n scripts/check-product-browser.sh
           bash -n iso/overlay/usr/local/bin/josh-os-session
           bash -n iso/overlay/usr/local/bin/josh-os-browser
