@@ -14,7 +14,7 @@ Josh OS currently spans three related repositories with different jobs:
 - **[Parris-Tech-Services/JoshOS-Stage0](https://github.com/Parris-Tech-Services/JoshOS-Stage0)** — a **Stage 0 product-track extraction/prototype** focused on the browser shell and ArchISO live image. It is useful for iterating on the desktop experience, but it is not the canonical native-kernel repository.
 - **[Parris-Tech-Services/JoshBIOS](https://github.com/Parris-Tech-Services/JoshBIOS)** — the **JoshBIOS / firmware / bootloader research stack**. Its `boot/`, `firmware/` and small `kernel/` payload are exploring the power-on-to-kernel handoff independently of the main Josh OS kernel.
 
-The current native Josh OS kernel boots through **Limine**. JoshBIOS does **not** currently boot this kernel. The intended future integration point is a versioned boot ABI: once JoshBootloader can load ELF64/x86-64 kernels and provide the required memory/framebuffer/firmware information, it can become an alternative boot path into the canonical Josh OS kernel.
+The canonical Josh OS kernel still boots through **Limine** as the independent reference path, and it now also boots through JoshBootloader's verified legacy-BIOS path. JoshBootloader discovers the MBR/FAT32 boot partition, opens `/BOOT/JOSH/KERNEL.ELF`, validates/loads the ELF64 image, enters x86-64 long mode, constructs Josh Boot Protocol v0 data and reaches the same `JOSHOS_BOOT_OK` marker in QEMU. The UEFI JoshBootloader path remains scaffold-only.
 
 ## Two complementary tracks
 
@@ -42,7 +42,7 @@ GitHub Actions builds this as the **JoshOS-Stage0-Live-x86_64** artifact.
 
 The independent Josh kernel already:
 
-- boots on x86-64 through Limine;
+- boots on x86-64 through Limine and through the verified legacy-BIOS JoshBootloader path;
 - shows a **Josh OS Boot Manager** for three seconds before auto-boot;
 - isolates Limine behind a Josh-owned boot-context adapter;
 - produces a hybrid BIOS/UEFI ISO suitable for QEMU and Ventoy;
