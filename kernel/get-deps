@@ -1,0 +1,20 @@
+#!/bin/sh
+set -eu
+cd "$(dirname "$0")"
+
+clone_pinned() {
+    url="$1"
+    dir="$2"
+    commit="$3"
+    if [ ! -d "$dir/.git" ]; then
+        rm -rf "$dir"
+        git clone -q "$url" "$dir"
+    fi
+    git -C "$dir" fetch -q origin "$commit"
+    git -C "$dir" checkout -q --detach "$commit"
+}
+
+rm -f .deps-obtained
+clone_pinned https://github.com/osdev0/freestanding-c-hdrs.git freestanding-c-hdrs 38fed4e1e3365733ddbfa03b0a28936243ad31e9
+clone_pinned https://github.com/Limine-Bootloader/limine-protocol.git limine-protocol da65184e91f80fcb397270121b1e2515a11e01ee
+touch .deps-obtained
