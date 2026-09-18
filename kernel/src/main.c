@@ -19,6 +19,7 @@
 #include "serial.h"
 #include "scheduler.h"
 #include "shell.h"
+#include "smp.h"
 
 static boot_context_t boot_context;
 static cpu_features_t cpu_features;
@@ -113,6 +114,20 @@ static __attribute__((noreturn)) void kernel_after_paging(void) {
     serial_write("JOSHOS_APIC_OK\n");
     serial_write("JOSHOS_IOAPIC_OK\n");
 
+    smp_status_t smp_status =
+        smp_init(&platform_info, apic_local_id());
+    if (smp_status != SMP_OK) {
+        serial_write("JOSHOS_ERROR_SMP_INIT\n");
+        serial_write(smp_status_string(smp_status));
+        serial_write("\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_SMP_TOPOLOGY_OK\n");
+    serial_write("JOSHOS_PERCPU_STACKS_OK\n");
+    if (smp_cpu_count() > 1) {
+        serial_write("JOSHOS_SMP_MULTICPU_OK\n");
+    }
+
     input_reset();
 
     timer_status_t timer_status = timer_init(100);
@@ -153,6 +168,12 @@ static __attribute__((noreturn)) void kernel_after_paging(void) {
         halt_forever();
     }
     serial_write("JOSHOS_TIMER_IRQ_OK\n");
+
+    if (!smp_self_ipi_test()) {
+        serial_write("JOSHOS_ERROR_IPI_TEST\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_IPI_OK\n");
     serial_write("JOSHOS_INTERRUPT_INPUT_READY\n");
 
     serial_write("JOSHOS_BOOT_OK\n");
