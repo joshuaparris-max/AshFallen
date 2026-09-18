@@ -19,16 +19,20 @@ export JOSH_WPCTL="$tmp/wpctl"
 export JOSH_AUDIO_TEST_LOG="$tmp/calls"
 audio="$ROOT/iso/overlay/usr/local/bin/josh-audio"
 
-"$audio" status >/dev/null
-"$audio" volume 42
-"$audio" up
-"$audio" down 7
-"$audio" toggle
-"$audio" mute
-"$audio" unmute
-"$audio" mic-toggle
-"$audio" devices >/dev/null
-"$audio" default 71
+run_audio() {
+  bash run_audio "$@"
+}
+
+run_audio status >/dev/null
+run_audio volume 42
+run_audio up
+run_audio down 7
+run_audio toggle
+run_audio mute
+run_audio unmute
+run_audio mic-toggle
+run_audio devices >/dev/null
+run_audio default 71
 
 grep -Fxq 'get-volume @DEFAULT_AUDIO_SINK@' "$JOSH_AUDIO_TEST_LOG"
 grep -Fxq 'get-volume @DEFAULT_AUDIO_SOURCE@' "$JOSH_AUDIO_TEST_LOG"
@@ -40,15 +44,15 @@ grep -Fxq 'set-mute @DEFAULT_AUDIO_SOURCE@ toggle' "$JOSH_AUDIO_TEST_LOG"
 grep -Fxq 'status --name' "$JOSH_AUDIO_TEST_LOG"
 grep -Fxq 'set-default 71' "$JOSH_AUDIO_TEST_LOG"
 
-if "$audio" volume 101 >/dev/null 2>&1; then
+if run_audio volume 101 >/dev/null 2>&1; then
   echo "josh-audio accepted invalid volume" >&2
   exit 1
 fi
-if "$audio" down nope >/dev/null 2>&1; then
+if run_audio down nope >/dev/null 2>&1; then
   echo "josh-audio accepted invalid step" >&2
   exit 1
 fi
-if "$audio" default abc >/dev/null 2>&1; then
+if run_audio default abc >/dev/null 2>&1; then
   echo "josh-audio accepted invalid node ID" >&2
   exit 1
 fi
