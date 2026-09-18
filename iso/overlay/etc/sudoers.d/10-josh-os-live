@@ -1,0 +1,2 @@
+# The ISO is a disposable development/live environment.
+josh ALL=(ALL:ALL) NOPASSWD: ALL
