@@ -10,7 +10,9 @@ clone_pinned() {
         rm -rf "$dir"
         git clone -q "$url" "$dir"
     fi
-    git -C "$dir" fetch -q origin "$commit"
+    if ! git -C "$dir" cat-file -e "$commit^{commit}" 2>/dev/null; then
+        git -C "$dir" fetch -q origin
+    fi
     git -C "$dir" checkout -q --detach "$commit"
 }
 
