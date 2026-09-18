@@ -34,6 +34,13 @@ sleep 0.5
 
 run_shell() {
   local url='file:///opt/josh-os/shell/index.html'
+  for _ in $(seq 1 30); do
+    if curl --silent --fail --max-time 1 http://127.0.0.1:8765/api/health >/dev/null 2>&1; then
+      url='http://127.0.0.1:8765/'
+      break
+    fi
+    sleep 0.2
+  done
   while true; do
     chromium       --kiosk       --ozone-platform=x11       --no-first-run       --disable-session-crashed-bubble       --password-store=basic       --user-data-dir="$HOME/.config/chromium-josh-shell"       "$url" >/tmp/josh-os-shell.log 2>&1
     sleep 1
