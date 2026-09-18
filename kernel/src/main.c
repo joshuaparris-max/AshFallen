@@ -6,11 +6,29 @@
 #include "interrupts.h"
 #include "keyboard.h"
 #include "pmm.h"
+#include "paging.h"
 #include "serial.h"
 #include "shell.h"
 
+static boot_context_t boot_context;
+
 static void halt_forever(void) {
     for (;;) __asm__ volatile ("hlt");
+}
+
+static __attribute__((noreturn)) void kernel_after_paging(void) {
+    gfx_init(&boot_context.framebuffer);
+    desktop_layout_t layout = desktop_draw();
+    shell_init(layout.terminal_x, layout.terminal_y, layout.terminal_w, layout.terminal_h,
+               boot_context.usable_memory_mib);
+
+    serial_write("JOSHOS_BOOT_OK\n");
+
+    for (;;) {
+        char key = keyboard_poll();
+        if (key) shell_handle_key(key);
+        __asm__ volatile ("pause");
+    }
 }
 
 static void report_boot_error(boot_status_t status) {
@@ -120,8 +138,7 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
     halt_forever();
 #endif
 
-    boot_context_t boot;
-    boot_status_t status = boot_context_init(&boot, loader_magic1, loader_magic2, loader_payload);
+    boot_status_t status = boot_context_init(&boot_context, loader_magic1, loader_magic2, loader_payload);
     if (status != BOOT_OK) {
         report_boot_error(status);
         halt_forever();
@@ -136,7 +153,7 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
         serial_write("JOSHOS_SMBIOS_OK\n");
     }
 
-    pmm_status_t pmm_status = pmm_init(&boot);
+    pmm_status_t pmm_status = pmm_init(&boot_context);
     if (pmm_status != PMM_OK) {
         serial_write("JOSHOS_ERROR_PMM_INIT\n");
         serial_write(pmm_status_string(pmm_status));
@@ -151,16 +168,15 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
     }
     serial_write("JOSHOS_PMM_STRESS_OK\n");
 
-    gfx_init(&boot.framebuffer);
-    desktop_layout_t layout = desktop_draw();
-    shell_init(layout.terminal_x, layout.terminal_y, layout.terminal_w, layout.terminal_h,
-               boot.usable_memory_mib);
-
-    serial_write("JOSHOS_BOOT_OK\n");
-
-    for (;;) {
-        char key = keyboard_poll();
-        if (key) shell_handle_key(key);
-        __asm__ volatile ("pause");
+    uint64_t paging_root = 0;
+    paging_status_t paging_status = paging_init(&boot_context, &paging_root);
+    if (paging_status != PAGING_OK) {
+        serial_write("JOSHOS_ERROR_PAGING_INIT\n");
+        serial_write(paging_status_string(paging_status));
+        serial_write("\n");
+        halt_forever();
     }
+    serial_write("JOSHOS_PAGING_TABLES_OK\n");
+
+    paging_activate(paging_root, kernel_after_paging);
 }

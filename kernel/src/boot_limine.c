@@ -163,7 +163,6 @@ boot_status_t boot_limine_context_init(boot_context_t *context) {
     struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
     if (!framebuffer_valid(fb)) return BOOT_UNSUPPORTED_FRAMEBUFFER;
 
-    context->framebuffer.address = fb->address;
     context->framebuffer.width = fb->width;
     context->framebuffer.height = fb->height;
     context->framebuffer.pitch = fb->pitch;
@@ -182,6 +181,13 @@ boot_status_t boot_limine_context_init(boot_context_t *context) {
         find_framebuffer_phys(fb, &context->framebuffer_phys_start,
                               &context->framebuffer_phys_end);
     if (framebuffer_phys_status != BOOT_OK) return framebuffer_phys_status;
+
+    if (add_overflows_u64(hhdm_request.response->offset,
+                          context->framebuffer_phys_start)) {
+        return BOOT_NO_PHYSICAL_MAP;
+    }
+    context->framebuffer.address = (void *)(uintptr_t)(
+        hhdm_request.response->offset + context->framebuffer_phys_start);
 
     uint64_t kernel_size = (uint64_t)(uintptr_t)__kernel_end -
                            (uint64_t)(uintptr_t)__kernel_start;
