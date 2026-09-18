@@ -1,0 +1,11 @@
+*.iso
+*.hdd
+boot.log
+iso_root/
+limine-binary/
+limine-binary.tar.gz
+kernel/bin/
+kernel/obj/
+kernel/freestanding-c-hdrs/
+kernel/limine-protocol/
+kernel/.deps-obtained
