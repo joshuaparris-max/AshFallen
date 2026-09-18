@@ -67,11 +67,11 @@ Deliberately trigger:
 
 - [x] invalid opcode;
 - [x] double fault (forced #GP delivery failure);
-- [ ] divide-by-zero;
-- [ ] page fault;
-- [ ] general protection fault.
+- [x] divide-by-zero;
+- [x] page fault;
+- [x] general protection fault.
 
-CI proves both the invalid-opcode path and the dedicated double-fault/IST path reach their expected serial panic markers instead of silently hanging or triple-faulting. The invalid-opcode test additionally verifies that values saved at opposite ends of the general-purpose register frame survive exception entry unchanged.
+CI now deliberately exercises invalid opcode (#UD), divide error (#DE), page fault (#PF), general protection (#GP), and the dedicated double-fault/IST path. GitHub Actions run `35346395226` verified all five reach their expected serial panic markers; the page-fault test additionally verifies `CR2=0x00007FFFFFFFF000`, and the invalid-opcode test verifies seeded values at opposite ends of the saved general-purpose register frame.
 
 ---
 
