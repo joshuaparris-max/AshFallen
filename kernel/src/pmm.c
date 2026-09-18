@@ -170,8 +170,7 @@ pmm_status_t pmm_init(const boot_context_t *boot) {
 
 uint64_t pmm_alloc_frames(uint32_t frame_count) {
     if (!initialised || frame_count == 0 ||
-        frame_count > free_frames ||
-        (uint64_t)frame_count > UINT64_MAX / PMM_PAGE_SIZE) {
+        frame_count > free_frames) {
         return PMM_INVALID_FRAME;
     }
 
@@ -195,8 +194,7 @@ uint64_t pmm_alloc_frame(void) {
 
 pmm_status_t pmm_free_frames(uint64_t frame, uint32_t frame_count) {
     if (!initialised || frame_count == 0 ||
-        (frame & (PMM_PAGE_SIZE - 1u)) != 0 ||
-        (uint64_t)frame_count > UINT64_MAX / PMM_PAGE_SIZE) {
+        (frame & (PMM_PAGE_SIZE - 1u)) != 0) {
         return PMM_INVALID_FREE;
     }
 
