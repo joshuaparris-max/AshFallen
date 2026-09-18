@@ -7,8 +7,16 @@
 #define PAGE_MASK UINT64_C(0x000ffffffffff000)
 #define PAGE_PRESENT UINT64_C(0x001)
 #define PAGE_RW UINT64_C(0x002)
+#define PAGE_PWT UINT64_C(0x008)
+#define PAGE_PCD UINT64_C(0x010)
 #define PAGE_PS UINT64_C(0x080)
 #define DIRECT_MAP_MAX UINT64_C(0x10000000000)
+#define MMIO_VIRTUAL_BASE UINT64_C(0xffffc00000000000)
+#define MMIO_VIRTUAL_LIMIT UINT64_C(0xffffc00040000000)
+
+static const boot_context_t *active_boot;
+static uint64_t active_root_phys;
+static uint64_t next_mmio_virtual = MMIO_VIRTUAL_BASE;
 
 static void zero_page(void *page) {
     uint64_t *words = (uint64_t *)page;
@@ -105,11 +113,12 @@ static paging_status_t map_2m(
     return PAGING_OK;
 }
 
-static paging_status_t map_4k(
+static paging_status_t map_4k_flags(
     const boot_context_t *boot,
     uint64_t root_phys,
     uint64_t virt,
-    uint64_t phys
+    uint64_t phys,
+    uint64_t extra_flags
 ) {
     if ((virt & (PAGE_SIZE - 1u)) != 0 ||
         (phys & (PAGE_SIZE - 1u)) != 0) {
@@ -134,12 +143,21 @@ static paging_status_t map_4k(
     uint64_t *pt = (uint64_t *)phys_ptr(boot, pt_phys);
     if (!pt) return PAGING_UNSUPPORTED_LAYOUT;
     uint16_t index = (uint16_t)((virt >> 12) & 0x1ffu);
-    uint64_t wanted = phys | PAGE_PRESENT | PAGE_RW;
+    uint64_t wanted = phys | PAGE_PRESENT | PAGE_RW | extra_flags;
     if ((pt[index] & PAGE_PRESENT) && pt[index] != wanted) {
         return PAGING_MAPPING_CONFLICT;
     }
     pt[index] = wanted;
     return PAGING_OK;
+}
+
+static paging_status_t map_4k(
+    const boot_context_t *boot,
+    uint64_t root_phys,
+    uint64_t virt,
+    uint64_t phys
+) {
+    return map_4k_flags(boot, root_phys, virt, phys, 0);
 }
 
 static int physical_map_limit(const boot_context_t *boot, uint64_t *limit_out) {
@@ -213,7 +231,37 @@ paging_status_t paging_init(const boot_context_t *boot, uint64_t *root_phys_out)
         if (status != PAGING_OK) return status;
     }
 
+    active_boot = boot;
+    active_root_phys = root_phys;
+    next_mmio_virtual = MMIO_VIRTUAL_BASE;
     *root_phys_out = root_phys;
+    return PAGING_OK;
+}
+
+paging_status_t paging_map_mmio(uint64_t physical_address, uint64_t length, void **virtual_out) {
+    if (!active_boot || active_root_phys == 0 || !virtual_out || length == 0) {
+        return PAGING_BAD_ARGUMENT;
+    }
+    uint64_t phys_page = align_down(physical_address, PAGE_SIZE);
+    uint64_t offset = physical_address - phys_page;
+    if (UINT64_MAX - offset < length) return PAGING_UNSUPPORTED_LAYOUT;
+
+    uint64_t bytes;
+    if (!align_up(offset + length, PAGE_SIZE, &bytes)) return PAGING_UNSUPPORTED_LAYOUT;
+    if (next_mmio_virtual > MMIO_VIRTUAL_LIMIT ||
+        bytes > MMIO_VIRTUAL_LIMIT - next_mmio_virtual) return PAGING_UNSUPPORTED_LAYOUT;
+
+    uint64_t base = next_mmio_virtual;
+    for (uint64_t mapped = 0; mapped < bytes; mapped += PAGE_SIZE) {
+        if (UINT64_MAX - phys_page < mapped) return PAGING_UNSUPPORTED_LAYOUT;
+        paging_status_t status = map_4k_flags(
+            active_boot, active_root_phys, base + mapped, phys_page + mapped,
+            PAGE_PWT | PAGE_PCD);
+        if (status != PAGING_OK) return status;
+        __asm__ volatile ("invlpg (%0)" :: "r"((void *)(uintptr_t)(base + mapped)) : "memory");
+    }
+    next_mmio_virtual += bytes;
+    *virtual_out = (void *)(uintptr_t)(base + offset);
     return PAGING_OK;
 }
 
