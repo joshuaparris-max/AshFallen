@@ -1,0 +1,97 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+WPCTL="${JOSH_WPCTL:-wpctl}"
+SINK="@DEFAULT_AUDIO_SINK@"
+SOURCE="@DEFAULT_AUDIO_SOURCE@"
+
+usage() {
+  cat <<'EOF'
+Usage:
+  josh-audio status
+  josh-audio volume <0-100>
+  josh-audio up [1-100]
+  josh-audio down [1-100]
+  josh-audio mute
+  josh-audio unmute
+  josh-audio toggle
+  josh-audio mic-mute
+  josh-audio mic-unmute
+  josh-audio mic-toggle
+  josh-audio devices
+  josh-audio default <WirePlumber node ID>
+EOF
+}
+
+die() {
+  echo "josh-audio: $*" >&2
+  exit 2
+}
+
+require_integer_range() {
+  local value="$1"
+  local min="$2"
+  local max="$3"
+  [[ "$value" =~ ^[0-9]+$ ]] || die "expected an integer from $min to $max"
+  (( value >= min && value <= max )) ||
+    die "expected an integer from $min to $max"
+}
+
+command -v "$WPCTL" >/dev/null 2>&1 ||
+  die "wpctl is unavailable; WirePlumber is not installed or not on PATH"
+
+action="${1:-status}"
+case "$action" in
+  status)
+    echo "Output:"
+    "$WPCTL" get-volume "$SINK"
+    echo "Input:"
+    "$WPCTL" get-volume "$SOURCE"
+    ;;
+  volume)
+    [[ $# -eq 2 ]] || { usage >&2; exit 2; }
+    require_integer_range "$2" 0 100
+    "$WPCTL" set-volume --limit 1.0 "$SINK" "$2%"
+    ;;
+  up|down)
+    step="${2:-5}"
+    [[ $# -le 2 ]] || { usage >&2; exit 2; }
+    require_integer_range "$step" 1 100
+    suffix="+"
+    [[ "$action" == "down" ]] && suffix="-"
+    "$WPCTL" set-volume --limit 1.0 "$SINK" "$step%$suffix"
+    ;;
+  mute)
+    "$WPCTL" set-mute "$SINK" 1
+    ;;
+  unmute)
+    "$WPCTL" set-mute "$SINK" 0
+    ;;
+  toggle)
+    "$WPCTL" set-mute "$SINK" toggle
+    ;;
+  mic-mute)
+    "$WPCTL" set-mute "$SOURCE" 1
+    ;;
+  mic-unmute)
+    "$WPCTL" set-mute "$SOURCE" 0
+    ;;
+  mic-toggle)
+    "$WPCTL" set-mute "$SOURCE" toggle
+    ;;
+  devices)
+    "$WPCTL" status --name
+    ;;
+  default)
+    [[ $# -eq 2 ]] || { usage >&2; exit 2; }
+    [[ "$2" =~ ^[0-9]+$ ]] || die "WirePlumber node ID must be numeric"
+    "$WPCTL" set-default "$2"
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
