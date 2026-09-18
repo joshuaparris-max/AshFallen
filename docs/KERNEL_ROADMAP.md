@@ -40,25 +40,27 @@ Implement:
 
 - [ ] GDT owned by the kernel;
 - [ ] TSS;
-- [ ] IDT;
-- [ ] exception stubs;
-- [ ] page-fault handler;
-- [ ] general-protection-fault handler;
+- [x] IDT;
+- [x] exception stubs;
+- [x] page-fault handler;
+- [x] general-protection-fault handler;
 - [ ] double-fault strategy;
 - [ ] register dump;
 - [ ] stack trace groundwork where feasible;
 - [ ] graphical + serial panic path.
 
+The current slice installs kernel-owned exception gates for vectors 0–31 and reports the vector, error code, RIP, CS and RFLAGS over serial. Page faults also report CR2. The IDT intentionally reuses the code selector supplied by the current Limine environment; a Josh-owned GDT, TSS/IST and graphical panic path are still outstanding.
+
 ### Test cases
 
 Deliberately trigger:
 
-- invalid opcode;
-- divide-by-zero;
-- page fault;
-- general protection fault.
+- [x] invalid opcode;
+- [ ] divide-by-zero;
+- [ ] page fault;
+- [ ] general protection fault.
 
-CI should prove the expected panic marker appears instead of hanging.
+CI proves the invalid-opcode path reaches the expected serial panic marker instead of silently hanging or triple-faulting.
 
 ---
 
