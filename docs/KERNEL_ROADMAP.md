@@ -99,46 +99,54 @@ AshFallen CI run `35395723343` booted through Limine with the allocator and the 
 ## K3 — Virtual memory
 
 - [x] own page tables after boot;
-- [ ] map kernel with explicit permissions;
-- [ ] NX where supported;
-- [ ] read-only kernel text/rodata after init;
-- [ ] framebuffer mapping;
-- [ ] MMIO mapping API;
-- [ ] temporary mapping mechanism;
+- [x] map kernel with explicit permissions;
+- [x] NX where supported;
+- [x] read-only kernel text/rodata after init;
+- [x] framebuffer mapping;
+- [x] MMIO mapping API;
+- [x] temporary mapping mechanism;
 - [ ] guard pages around critical stacks;
 - [ ] address-space abstraction for future processes.
 
-The first K3 slice is now real: the kernel allocates its own x86-64 page-table hierarchy from the PMM, maps the direct physical-memory window plus the higher-half kernel, switches CR3, moves to a Josh-owned transition stack and only then emits `JOSHOS_PAGING_OWNED_OK`. This is verified on both the Limine and JoshBootloader QEMU paths. Permissions are intentionally still permissive; W^X/NX and section-level read-only mappings remain outstanding.
+The kernel now allocates its own x86-64 page-table hierarchy from the PMM, switches CR3, and verifies that it is executing on the Josh-owned root. The higher-half kernel maps text read-only/executable, rodata read-only/NX, and data/BSS read-write/NX. The physical direct map is NX, the framebuffer is mapped read-write/NX with cache-disabling flags, and dedicated MMIO plus one-page temporary mapping APIs exist for devices and firmware-table access.
 
-Document the intended higher-half layout before it spreads through code.
+The paging-transition stack has unmapped guard pages and is checked at runtime, but the broader roadmap item remains open until other critical kernel stacks such as exception/per-thread stacks receive the same treatment. `paging_address_space_t` currently names the kernel root only; that is not yet a sufficient process address-space lifecycle abstraction, so that item also remains open.
+
+GitHub Actions run `35407321192` verified CR3 ownership and the RX/RO/RW/NX/framebuffer/guard invariants in QEMU before continuing to `JOSHOS_BOOT_OK`.
 
 ---
 
 ## K4 — Kernel allocation
 
-- [ ] small-object allocator;
-- [ ] page-backed heap growth;
-- [ ] allocation failure semantics;
-- [ ] zeroed allocation helper;
-- [ ] debug poisoning/canaries where useful;
-- [ ] leak/accounting hooks for tests.
+- [x] small-object allocator;
+- [x] page-backed heap growth;
+- [x] allocation failure semantics;
+- [x] zeroed allocation helper;
+- [x] debug poisoning/canaries where useful;
+- [x] leak/accounting hooks for tests.
 
-Avoid making the allocator API more clever than current needs.
+The kernel heap is backed by contiguous PMM page runs and provides `kmalloc`, `kzalloc` and `kfree`. It splits and coalesces free blocks, returns null on allocation failure, records failure/allocation/region statistics, poisons allocated/freed payloads, and places a canary immediately after the requested payload. Host tests exercise growth, alignment, zeroing, accounting, coalescing/double-free behaviour and canary corruption; the live kernel also runs `heap_self_test()` after switching to Josh-owned page tables.
+
+GitHub Actions run `35407321192` passed the heap host tests and required both `JOSHOS_HEAP_OK` and `JOSHOS_HEAP_SELF_TEST_OK` during the QEMU boot. The allocator is still single-core infrastructure; SMP-safe locking is tracked separately in K6.
 
 ---
 
 ## K5 — Interrupts and time
 
-- [ ] PIC transition/disable strategy;
-- [ ] local APIC detection;
-- [ ] IOAPIC where applicable;
-- [ ] timer source selection;
-- [ ] monotonic time;
-- [ ] sleep/deadline primitive;
-- [ ] interrupt-safe event queue;
-- [ ] replace keyboard polling with interrupt-driven input.
+- [x] PIC transition/disable strategy;
+- [x] local APIC detection;
+- [x] IOAPIC where applicable;
+- [x] timer source selection;
+- [x] monotonic time;
+- [x] sleep/deadline primitive;
+- [x] interrupt-safe event queue;
+- [x] replace keyboard polling with interrupt-driven input.
 
-A stable clock is foundational for scheduling, input, networking and logs.
+ACPI RSDP/RSDT/XSDT/MADT parsing now supplies LAPIC, IOAPIC, CPU and ISA-interrupt-override topology. The kernel masks the legacy PIC, enables/maps xAPIC, masks IOAPIC redirection entries by default, and routes only explicitly configured IRQs. The initial clock source is the PIT at 100 Hz through IOAPIC IRQ0; it provides monotonic ticks/nanoseconds and a halt-based millisecond sleep primitive.
+
+Input uses a single-producer/single-consumer interrupt-safe event ring. The PS/2 driver enables IRQ1 in the 8042, routes it through the IOAPIC, decodes Set-1 make/break/modifier events and pushes them into that queue. `keyboard_poll()` is retained only as a compatibility queue consumer; it no longer polls the hardware ports.
+
+GitHub Actions run `35407321192` booted the real ISO with two vCPUs and required `JOSHOS_ACPI_MADT_OK`, `JOSHOS_APIC_OK`, `JOSHOS_IOAPIC_OK`, `JOSHOS_TIMER_IRQ_OK` and `JOSHOS_INTERRUPT_INPUT_READY`. Its separate keyboard IRQ step then used the QEMU monitor `sendkey a` command and required `JOSHOS_KEYBOARD_IRQ_OK`, proving a real emulated PS/2 interrupt reached the kernel event consumer.
 
 ---
 
@@ -146,17 +154,21 @@ A stable clock is foundational for scheduling, input, networking and logs.
 
 After single-core correctness:
 
-- [ ] CPUID capability inventory;
-- [ ] required-feature validation;
-- [ ] per-CPU state;
+- [x] CPUID capability inventory;
+- [x] required-feature validation;
+- [x] per-CPU state;
 - [ ] application processor startup;
-- [ ] per-CPU stacks;
-- [ ] interrupt routing;
-- [ ] spinlock primitives;
+- [x] per-CPU stacks;
+- [x] interrupt routing;
+- [x] spinlock primitives;
 - [ ] cross-CPU signalling;
 - [ ] SMP-safe allocator and scheduler work.
 
-Do not make early subsystems accidentally SMP-dependent before this milestone.
+CPUID inventory records APIC/x2APIC, MSR, TSC, PAE, NX, invariant TSC, SMEP and SMAP capability; the boot path validates its required CPU feature set and enables EFER.NXE before installing the owned mappings. ACPI CPU entries are converted into a bounded per-CPU topology with a identified BSP, per-CPU state and dedicated 32 KiB kernel-stack allocations. IRQ routing targets the BSP's local APIC ID, and x86 spinlocks include try-lock plus IRQ-save/restore forms with a host contention stress test.
+
+The current IPI test deliberately sends an APIC fixed interrupt back to the BSP and verifies delivery through the normal IDT handler. That proves the IPI mechanism but is **not** cross-CPU signalling, so that checkbox remains open. Likewise, QEMU advertises two CPUs and the kernel enumerates both, but the application processor is not yet started into Josh kernel code; AP startup and SMP-safe PMM/heap/scheduler work therefore remain open.
+
+GitHub Actions run `35407321192` required `JOSHOS_SMP_MULTICPU_OK`, `JOSHOS_PERCPU_STACKS_OK` and `JOSHOS_IPI_OK` on a `-smp 2` QEMU boot.
 
 ---
 
