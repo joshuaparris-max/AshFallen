@@ -27,16 +27,20 @@ Use this machine to drive concrete early decisions, but keep hardware-specific q
 ### Goals
 
 - [x] Introduce a boot-adapter layer instead of reading Limine request structures throughout kernel code.
-- [ ] Define an internal `josh_boot_info` representation.
+- [x] Define an internal Josh-owned boot-context representation.
 - [x] Validate framebuffer geometry and address arithmetic.
-- [ ] Validate/sanitise memory-map entries.
+- [x] Validate/sanitise memory-map entries.
 - [ ] Preserve raw boot-protocol metadata for debug builds.
-- [ ] Add support for Josh Boot Protocol alongside Limine.
+- [x] Add support for Josh Boot Protocol alongside Limine.
 - [ ] Keep Limine as a reference boot path until the JoshBootloader path is equally reliable.
+
+The Josh-owned `boot_context_t` now preserves framebuffer data, a bounded internal memory-map representation, usable-memory accounting and firmware-table pointers without leaking Limine structures into the rest of the kernel. Josh Boot Protocol entries are range-checked for overflow, zero-length entries are discarded, and unknown/reserved memory is kept non-usable by default.
+
+AshFallen CI run `35345674776` passed the host protocol tests plus the Limine boot path at commit `2c65821`. JoshBIOS cross-repo run `35345724402` checked out that exact AshFallen commit and booted it through the JoshBootloader path to `JOSHOS_BOOT_OK`.
 
 ### Exit test
 
-The same kernel binary or source tree can boot through both supported adapters and reach the same `JOSHOS_BOOT_OK` milestone.
+The same kernel source tree now boots through both supported adapters and reaches the same `JOSHOS_BOOT_OK` milestone in QEMU. Limine remains the reference path while JoshBootloader gains UEFI and physical-hardware parity.
 
 ---
 
