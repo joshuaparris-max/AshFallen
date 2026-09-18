@@ -42,7 +42,9 @@ fi
 check "Chromium profile writable" test -w "$HOME/.config/chromium-josh-browser"
 check "Downloads writable" test -w "$HOME/Downloads"
 check "PipeWire/Pulse server" pactl info
+check "Default audio sink" bash -c 'pactl get-default-sink | grep -q .'
 check "GNOME Secret Service daemon" pgrep -x gnome-keyring-daemon
+check "Browser media codec probe" /usr/local/lib/josh-os/browser-media-probe
 
 if [[ -r /etc/ssl/certs/ca-certificates.crt || -r /etc/ca-certificates/extracted/tls-ca-bundle.pem ]]; then
   echo "OK   system CA certificate bundle"
@@ -55,6 +57,15 @@ if [[ -e /run/josh-os-persistence-active ]]; then
   echo "OK   persistent JOSH-DATA home active"
 else
   echo "INFO persistent JOSH-DATA home not mounted; live-session state is disposable"
+fi
+
+if command -v glxinfo >/dev/null 2>&1; then
+  renderer="$(glxinfo -B 2>/dev/null | sed -n 's/^[[:space:]]*OpenGL renderer string:[[:space:]]*//p' | head -n1)"
+  if [[ -n "$renderer" ]]; then
+    echo "INFO OpenGL renderer: $renderer"
+  else
+    echo "INFO OpenGL renderer unavailable in this session"
+  fi
 fi
 
 if command -v vainfo >/dev/null 2>&1; then

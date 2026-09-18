@@ -29,8 +29,13 @@ fi
 
 mount -o rw,nosuid,nodev "$device" "$mountpoint_path"
 chown josh:josh "$mountpoint_path"
-chmod 0750 "$mountpoint_path"
-install -d -o josh -g josh -m 0755   "$mountpoint_path/.config"   "$mountpoint_path/.local"   "$mountpoint_path/.local/share"   "$mountpoint_path/Downloads"
+chmod 0700 "$mountpoint_path"
+install -d -o josh -g josh -m 0700 \
+  "$mountpoint_path/.config" \
+  "$mountpoint_path/.local" \
+  "$mountpoint_path/.local/share" \
+  "$mountpoint_path/.local/share/keyrings" \
+  "$mountpoint_path/Downloads"
 
 touch /run/josh-os-persistence-active
 echo "Josh OS persistence: mounted $device at $mountpoint_path"

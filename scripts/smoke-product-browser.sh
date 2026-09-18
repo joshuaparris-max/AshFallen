@@ -19,7 +19,7 @@ run_boot() {
   local log="browser-boot-${pass}.log"
   rm -f "$log"
 
-  "$qemu"     -machine q35     -m 2048     -boot order=d     -cdrom "$iso"     -drive file="$data_image",format=raw,if=virtio     -nic user,model=e1000     -display none     -serial "file:$log"     -monitor none     -no-reboot     >/dev/null 2>&1 &
+  "$qemu"     -machine q35     -m 2048     -boot order=d     -cdrom "$iso"     -drive file="$data_image",format=raw,if=virtio     -nic user,model=e1000     -audiodev none,id=josh-audio     -device intel-hda     -device hda-duplex,audiodev=josh-audio     -display none     -serial "file:$log"     -monitor none     -no-reboot     >/dev/null 2>&1 &
   local pid=$!
 
   cleanup() {
@@ -32,6 +32,8 @@ run_boot() {
 
   for _ in $(seq 1 "$timeout_seconds"); do
     if grep -q 'JOSHOS_BROWSER_READY' "$log" 2>/dev/null &&
+       grep -q 'JOSHOS_BROWSER_PROFILE_READY' "$log" 2>/dev/null &&
+       grep -q 'JOSHOS_BROWSER_MEDIA_OK' "$log" 2>/dev/null &&
        grep -q 'JOSHOS_NETWORK_READY' "$log" 2>/dev/null &&
        grep -q "$persistence_marker" "$log" 2>/dev/null; then
       cleanup

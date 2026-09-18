@@ -1,6 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+umask 077
+
 if [[ "$(id -u)" -eq 0 ]]; then
   echo "josh-os-browser: refusing to run Chromium as root" >&2
   exit 1
@@ -10,7 +12,7 @@ profile="${JOSH_BROWSER_PROFILE:-$HOME/.config/chromium-josh-browser}"
 downloads="${JOSH_BROWSER_DOWNLOADS:-$HOME/Downloads}"
 
 mkdir -p "$profile" "$downloads"
-chmod 700 "$profile"
+chmod 700 "$profile" "$downloads"
 
 # Do not add --no-sandbox: Chromium keeps its normal Linux sandbox.
 # Do not add --disable-gpu: compositing/GPU acceleration stays available.

@@ -1,5 +1,6 @@
 {
   "DownloadDirectory": "/home/josh/Downloads",
   "PromptForDownloadLocation": false,
-  "PasswordManagerEnabled": true
+  "PasswordManagerEnabled": false,
+  "RestoreOnStartup": 1
 }

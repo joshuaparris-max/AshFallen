@@ -10,6 +10,9 @@ required_packages=(
   ca-certificates-mozilla
   chromium
   gnome-keyring
+  sof-firmware
+  mesa-utils
+  ffmpeg
   intel-media-driver
   libsecret
   libva-intel-driver
@@ -35,9 +38,11 @@ done
 launcher="$root/usr/local/bin/josh-os-browser"
 session="$root/usr/local/bin/josh-os-session"
 persist="$root/usr/local/lib/josh-os/prepare-persistent-home"
+media_probe="$root/usr/local/lib/josh-os/browser-media-probe"
+media_page="$root/usr/local/share/josh-os/browser-media-probe.html"
 policy="$root/etc/chromium/policies/managed/josh-os.json"
 
-for path in "$launcher" "$session" "$persist" "$policy"; do
+for path in "$launcher" "$session" "$persist" "$media_probe" "$media_page" "$policy"; do
   [[ -f "$path" ]] || { echo "browser check: missing $path" >&2; exit 1; }
 done
 
@@ -55,6 +60,8 @@ fi
 grep -q 'JOSH-DATA' "$persist"
 grep -q 'ext4' "$persist"
 grep -q '"DownloadDirectory": "/home/josh/Downloads"' "$policy"
+grep -q '"RestoreOnStartup": 1' "$policy"
+grep -q '"PasswordManagerEnabled": false' "$policy"
 grep -q 'pipewire-pulse.service' "$session"
 grep -q 'gnome-keyring-daemon' "$session"
 grep -q 'josh-os-browser chrome://newtab' "$session"

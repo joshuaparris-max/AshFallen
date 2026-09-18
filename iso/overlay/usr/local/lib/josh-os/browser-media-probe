@@ -1,0 +1,55 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+page="/usr/local/share/josh-os/browser-media-probe.html"
+profile="/tmp/josh-browser-media-probe-$$"
+dom="/tmp/josh-browser-media-probe-dom-$$.html"
+err="/tmp/josh-browser-media-probe-$$.log"
+youtube_dom="/tmp/josh-browser-youtube-probe-$$.html"
+
+cleanup() {
+  rm -rf "$profile" "$dom" "$err" "$youtube_dom"
+}
+trap cleanup EXIT
+
+install -d -o josh -g josh -m 0700 "$profile"
+
+run_chromium() {
+  runuser -u josh -- env \
+    HOME=/home/josh \
+    XDG_RUNTIME_DIR=/run/user/1000 \
+    /usr/bin/chromium \
+      --headless=new \
+      --no-first-run \
+      --disable-background-networking \
+      --password-store=basic \
+      --user-data-dir="$profile" \
+      --dump-dom "$@"
+}
+
+run_chromium "file://$page" >"$dom" 2>"$err"
+
+for codec in h264 vp9 av1 opus aac; do
+  if ! grep -Eq "${codec}=(maybe|probably)" "$dom"; then
+    echo "media probe: Chromium cannot play required codec: $codec" >&2
+    cat "$dom" >&2
+    exit 1
+  fi
+done
+
+for decoder in h264 vp9 av1 opus aac; do
+  if ! ffmpeg -hide_banner -decoders 2>/dev/null | grep -Eq "[[:space:]]${decoder}([[:space:]]|$)"; then
+    echo "media probe: FFmpeg decoder missing: $decoder" >&2
+    exit 1
+  fi
+done
+
+# Prove Chromium itself, not only curl, can complete HTTPS to YouTube.
+run_chromium "https://www.youtube.com/robots.txt" >"$youtube_dom" 2>>"$err"
+if ! grep -qi "User-agent" "$youtube_dom"; then
+  echo "media probe: Chromium could not render YouTube robots.txt over HTTPS" >&2
+  cat "$youtube_dom" >&2
+  exit 1
+fi
+
+echo "Chromium media codecs and YouTube HTTPS probe passed."

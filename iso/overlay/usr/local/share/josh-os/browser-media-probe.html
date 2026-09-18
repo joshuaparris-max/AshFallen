@@ -1,0 +1,17 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>Josh OS browser media probe</title>
+<pre id="result"></pre>
+<script>
+const video = document.createElement("video");
+const audio = document.createElement("audio");
+const probes = {
+  h264: video.canPlayType('video/mp4; codecs="avc1.42E01E"'),
+  vp9: video.canPlayType('video/webm; codecs="vp09.00.10.08"'),
+  av1: video.canPlayType('video/mp4; codecs="av01.0.04M.08"'),
+  opus: audio.canPlayType('audio/webm; codecs="opus"'),
+  aac: audio.canPlayType('audio/mp4; codecs="mp4a.40.2"')
+};
+document.getElementById("result").textContent =
+  Object.entries(probes).map(([name, value]) => name + "=" + (value || "no")).join("\\n");
+</script>

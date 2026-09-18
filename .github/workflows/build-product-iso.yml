@@ -37,6 +37,7 @@ jobs:
           bash -n iso/overlay/usr/local/bin/josh-wifi
           bash -n iso/overlay/usr/local/lib/josh-os/prepare-persistent-home
           bash -n iso/overlay/usr/local/lib/josh-os/browser-ready-probe
+          bash -n iso/overlay/usr/local/lib/josh-os/browser-media-probe
           bash -n scripts/smoke-product-browser.sh
 
       - name: Build ISO in Arch Linux
