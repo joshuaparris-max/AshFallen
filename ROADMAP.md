@@ -8,12 +8,12 @@ Every milestone should leave its implementation understandable and demonstrably 
 
 - [Power button → desktop](docs/POWER_ON_TO_DESKTOP_ROADMAP.md) — whole-stack ownership, firmware/start screen, boot menu, recovery, updates and physical-hardware support.
 - [Native kernel](docs/KERNEL_ROADMAP.md) — exceptions, memory, interrupts, processes, storage, networking, USB, graphics, power and security.
-- [Josh Boot Protocol](docs/BOOT_ABI.md) — future JoshBootloader ↔ canonical kernel contract.
+- [Josh Boot Protocol](docs/BOOT_ABI.md) — experimental JoshBootloader ↔ canonical kernel contract, now integration-tested on the legacy-BIOS path.
 - [Current boot stack](docs/BOOT_STACK.md) — today’s Limine adapter and branded Josh OS Boot Manager.
 - [Product/start/recovery experience](docs/product/OS_EXPERIENCE_ROADMAP.md) — firmware/OS splash continuity, first-run, session, accessibility, updates and recovery.
 - [Product track](docs/product/ROADMAP.md) — Linux-backed usable desktop and convergence.
 
-The current **Josh OS Boot Manager** is the branded Limine menu and remains a useful reference path. The long-term pre-kernel menu belongs in JoshBootloader once it can boot this canonical kernel reliably.
+The current **Josh OS Boot Manager** is the branded Limine menu and remains the reference UX/path. JoshBootloader can now boot this canonical kernel from FAT32 in QEMU on the legacy-BIOS path; it still needs UEFI parity, recovery and physical-hardware validation before displacing Limine.
 
 ## First physical validation target
 
