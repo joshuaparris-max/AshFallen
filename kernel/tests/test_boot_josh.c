@@ -60,6 +60,15 @@ int main(void) {
     info.framebuffer.address = 0xe0000000u;
     expect("valid boot info", boot_josh_context_init(&context, &info) == BOOT_OK);
     expect("usable memory", context.usable_memory_mib == 64);
+    expect("memory map count", context.memory_map_count == 2);
+    expect("usable region copied",
+           context.memory_map[0].base == UINT64_C(0x100000) &&
+           context.memory_map[0].length == UINT64_C(64) * 1024u * 1024u &&
+           context.memory_map[0].type == BOOT_MEMORY_USABLE);
+    expect("reserved region copied",
+           context.memory_map[1].base == 0 &&
+           context.memory_map[1].length == UINT64_C(0x100000) &&
+           context.memory_map[1].type == BOOT_MEMORY_RESERVED);
     expect("framebuffer copied", (uintptr_t)context.framebuffer.address == 0xe0000000u);
     expect("RSDP copied", context.rsdp_phys == UINT64_C(0x000f0000));
     expect("SMBIOS copied", context.smbios_phys == UINT64_C(0x000f1000));
@@ -88,6 +97,13 @@ int main(void) {
     info.smbios_phys = 0;
     expect("advertised SMBIOS without pointer rejected",
            boot_josh_context_init(&context, &info) == BOOT_INVALID_BOOT_INFO);
+
+    valid_info(&info, entries, framebuffer);
+    info.framebuffer.address = 0xe0000000u;
+    entries[1].length = 0;
+    expect("zero-length map accepted",
+           boot_josh_context_init(&context, &info) == BOOT_OK);
+    expect("zero-length region skipped", context.memory_map_count == 1);
 
     valid_info(&info, entries, framebuffer);
     info.framebuffer.address = 0xe0000000u;
