@@ -1,5 +1,14 @@
 Josh OS Stage 0 Live
 
 The graphical session should start automatically on tty1.
-For diagnostics, use Ctrl+Alt+F2 and log in through the graphical session's
-terminal tooling or return to tty1 with Ctrl+Alt+F1.
+For diagnostics, use Ctrl+Alt+F2; return to tty1 with Ctrl+Alt+F1.
+
+Internet and Wi-Fi diagnostics:
+  josh-wifi status
+  josh-wifi list
+  josh-wifi connect "Your SSID"
+  josh-network-check
+
+josh-wifi connect prompts securely for the Wi-Fi password.
+josh-network-check verifies NetworkManager, DNS, NTP time, CA certificates,
+routing, and a real HTTPS/TLS connection to https://www.youtube.com/.
