@@ -1,4 +1,6 @@
 #include <stdint.h>
+#include "ahci.h"
+#include "block.h"
 #include "boot.h"
 #include "cpu.h"
 #include "desktop.h"
@@ -7,13 +9,84 @@
 #include "heap.h"
 #include "interrupts.h"
 #include "keyboard.h"
+#include "pci.h"
 #include "net.h"
 #include "pmm.h"
 #include "paging.h"
+#include "partition.h"
 #include "serial.h"
 #include "shell.h"
 
 static boot_context_t boot_context;
+static pci_device_t ahci_controller;
+static int ahci_controller_present;
+
+
+static void serial_partition_result(const josh_block_device_t *block) {
+    josh_partition_summary_t summary;
+    josh_partition_status_t status =
+        josh_partition_scan(block, &summary, 0, 0);
+
+    if (status == JOSH_PARTITION_OK) {
+        serial_write("JOSHOS_PARTITION_SCAN_OK\n");
+    } else if (status == JOSH_PARTITION_NO_TABLE ||
+               status == JOSH_PARTITION_NO_PARTITIONS) {
+        serial_write("JOSHOS_PARTITION_NONE\n");
+    } else {
+        serial_write("JOSHOS_PARTITION_SCAN_ERROR\n");
+        serial_write(josh_partition_status_string(status));
+        serial_write("\n");
+    }
+}
+
+#ifdef JOSHOS_AHCI_PERSIST_TEST
+static int marker_matches(const uint8_t *sector) {
+    static const char marker[] = "JOSHOS_AHCI_PERSIST_V1";
+    for (uint32_t i = 0; i < sizeof(marker); ++i) {
+        if (sector[i] != (uint8_t)marker[i]) return 0;
+    }
+    return 1;
+}
+
+static void write_marker(uint8_t *sector) {
+    static const char marker[] = "JOSHOS_AHCI_PERSIST_V1";
+    for (uint32_t i = 0; i < JOSH_BLOCK_SECTOR_SIZE; ++i) sector[i] = 0;
+    for (uint32_t i = 0; i < sizeof(marker); ++i) {
+        sector[i] = (uint8_t)marker[i];
+    }
+}
+
+static void run_ahci_persistence_test(josh_block_device_t *block) {
+    static uint8_t sector[JOSH_BLOCK_SECTOR_SIZE];
+    const uint64_t marker_lba = 8;
+
+    if (!josh_block_range_valid(block, marker_lba, 1) ||
+        josh_block_read(block, marker_lba, 1, sector) != 0) {
+        serial_write("JOSHOS_AHCI_PERSIST_READ_ERROR\n");
+        return;
+    }
+
+    if (marker_matches(sector)) {
+        serial_write("JOSHOS_AHCI_PERSIST_OK\n");
+        return;
+    }
+
+    write_marker(sector);
+    if (josh_block_write(block, marker_lba, 1, sector) != 0) {
+        serial_write("JOSHOS_AHCI_PERSIST_WRITE_ERROR\n");
+        return;
+    }
+
+    for (uint32_t i = 0; i < JOSH_BLOCK_SECTOR_SIZE; ++i) sector[i] = 0;
+    if (josh_block_read(block, marker_lba, 1, sector) != 0 ||
+        !marker_matches(sector)) {
+        serial_write("JOSHOS_AHCI_PERSIST_VERIFY_ERROR\n");
+        return;
+    }
+
+    serial_write("JOSHOS_AHCI_PERSIST_WRITTEN\n");
+}
+#endif
 
 static void halt_forever(void) {
     for (;;) __asm__ volatile ("hlt");
@@ -53,6 +126,28 @@ static __attribute__((noreturn)) void kernel_after_paging(void) {
         halt_forever();
     }
     serial_write("JOSHOS_NET_LOOPBACK_OK\n");
+
+    if (ahci_controller_present) {
+        static ahci_device_t ahci;
+        static josh_block_device_t block;
+        ahci_status_t ahci_status =
+            ahci_init(&ahci_controller, &boot_context, &ahci);
+
+        if (ahci_status == AHCI_OK &&
+            ahci_make_block_device(&ahci, &block) == 0) {
+            serial_write("JOSHOS_AHCI_OK\n");
+            serial_partition_result(&block);
+#ifdef JOSHOS_AHCI_PERSIST_TEST
+            run_ahci_persistence_test(&block);
+#endif
+        } else if (ahci_status == AHCI_NO_SATA_DEVICE) {
+            serial_write("JOSHOS_AHCI_NO_DISK\n");
+        } else {
+            serial_write("JOSHOS_AHCI_ERROR\n");
+            serial_write(ahci_status_string(ahci_status));
+            serial_write("\n");
+        }
+    }
 
     gfx_init(&boot_context.framebuffer);
     desktop_layout_t layout = desktop_draw();
@@ -202,6 +297,14 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
     if (boot_context.smbios_phys != 0) {
         serial_write("JOSHOS_SMBIOS_OK\n");
     }
+
+    pci_scan_summary_t pci_summary;
+    if (pci_init(&pci_summary) != 0) {
+        serial_write("JOSHOS_ERROR_PCI_INIT\n");
+        halt_forever();
+    }
+    ahci_controller_present =
+        pci_get_first_storage(PCI_STORAGE_AHCI, &ahci_controller) == 0;
 
     pmm_status_t pmm_status = pmm_init(&boot_context);
     if (pmm_status != PMM_OK) {

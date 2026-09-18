@@ -68,7 +68,9 @@ HOST_TEST_CPU := obj-host/test_cpu
 HOST_TEST_HEAP := obj-host/test_heap
 HOST_TEST_NET := obj-host/test_net_proto
 HOST_TEST_NETDEV := obj-host/test_net
-HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET) $(HOST_TEST_NETDEV)
+HOST_TEST_PCI := obj-host/test_pci
+HOST_TEST_PARTITION := obj-host/test_partition
+HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET) $(HOST_TEST_NETDEV) $(HOST_TEST_PCI) $(HOST_TEST_PARTITION)
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -111,6 +113,14 @@ $(HOST_TEST_NETDEV): tests/test_net.c src/net.c src/net.h
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_net.c src/net.c -o $@
 
+$(HOST_TEST_PCI): tests/test_pci.c src/pci.c src/pci.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -DJOSHOS_HOST_TEST -I src tests/test_pci.c src/pci.c -o $@
+
+$(HOST_TEST_PARTITION): tests/test_partition.c src/partition.c src/partition.h src/block.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_partition.c src/partition.c -o $@
+
 host-tests: $(HOST_TESTS)
 	$(HOST_TEST_BOOT)
 	$(HOST_TEST_PMM)
@@ -118,6 +128,8 @@ host-tests: $(HOST_TESTS)
 	$(HOST_TEST_HEAP)
 	$(HOST_TEST_NET)
 	$(HOST_TEST_NETDEV)
+	$(HOST_TEST_PCI)
+	$(HOST_TEST_PARTITION)
 
 clean:
 	rm -rf bin obj obj-host
