@@ -51,11 +51,11 @@ Implement:
 - [x] page-fault handler;
 - [x] general-protection-fault handler;
 - [x] double-fault strategy;
-- [ ] register dump;
+- [x] register dump;
 - [ ] stack trace groundwork where feasible;
 - [ ] graphical + serial panic path.
 
-The kernel installs its own 64-bit GDT and TSS before loading the IDT. TSS IST1 points at a dedicated 16 KiB emergency stack and exception vector 8 selects that IST for double-fault entry. CI deliberately makes #GP delivery fail, forcing the CPU into vector 8, and requires the double-fault panic marker and zero error code. Exception gates for vectors 0–31 report the vector, error code, RIP, CS and RFLAGS over serial; page faults also report CR2. A fuller register dump, stack-trace groundwork and graphical panic path are still outstanding.
+The kernel installs its own 64-bit GDT and TSS before loading the IDT. TSS IST1 points at a dedicated 16 KiB emergency stack and exception vector 8 selects that IST for double-fault entry. CI deliberately makes #GP delivery fail, forcing the CPU into vector 8, and requires the double-fault panic marker and zero error code. Josh-owned x86-64 assembly stubs now normalise all vectors into a canonical exception frame and preserve RAX, RBX, RCX, RDX, RSI, RDI, RBP, RSP and R8–R15 before entering C. The serial panic reports those registers alongside vector, error code, RIP, CS and RFLAGS; page faults also report CR2. CI seeds known RAX and R15 values immediately before an invalid opcode and requires the panic dump to recover both values exactly. Stack-trace groundwork and the graphical panic path are still outstanding.
 
 ### Test cases
 
@@ -67,7 +67,7 @@ Deliberately trigger:
 - [ ] page fault;
 - [ ] general protection fault.
 
-CI proves both the invalid-opcode path and the dedicated double-fault/IST path reach their expected serial panic markers instead of silently hanging or triple-faulting.
+CI proves both the invalid-opcode path and the dedicated double-fault/IST path reach their expected serial panic markers instead of silently hanging or triple-faulting. The invalid-opcode test additionally verifies that values saved at opposite ends of the general-purpose register frame survive exception entry unchanged.
 
 ---
 

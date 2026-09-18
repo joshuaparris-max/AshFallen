@@ -66,8 +66,11 @@ fault-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
 	grep -q JOSHOS_IDT_OK fault-boot.log
 	grep -q JOSHOS_FAULT_TEST_UD2 fault-boot.log
 	grep -q 'VECTOR=0x0000000000000006' fault-boot.log
+	grep -q JOSHOS_REGISTER_DUMP fault-boot.log
+	grep -q 'RAX=0x1122334455667788' fault-boot.log
+	grep -q 'R15=0x8877665544332211' fault-boot.log
 	grep -q JOSHOS_PANIC_HALT fault-boot.log
-	@echo "Josh OS invalid-opcode smoke test passed."
+	@echo "Josh OS invalid-opcode register-frame smoke test passed."
 	$(MAKE) -C kernel clean
 	rm -f fault-boot.log $(FAULT_IMAGE).iso
 
@@ -79,6 +82,7 @@ fault-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
 	grep -q JOSHOS_FAULT_TEST_DOUBLE_FAULT double-fault-boot.log
 	grep -q 'VECTOR=0x0000000000000008' double-fault-boot.log
 	grep -q 'ERROR=0x0000000000000000' double-fault-boot.log
+	grep -q JOSHOS_REGISTER_DUMP double-fault-boot.log
 	grep -q JOSHOS_PANIC_HALT double-fault-boot.log
 	@echo "Josh OS double-fault smoke test passed."
 	$(MAKE) -C kernel clean
