@@ -1,6 +1,6 @@
 #include "keyboard_decode.h"
 
-static char translate(uint8_t code, int shifted) {
+static char translate(uint8_t code, int shift_active) {
     static const char normal[58] = {
         0, 27, '1','2','3','4','5','6','7','8','9','0','-','=', '\b','\t',
         'q','w','e','r','t','y','u','i','o','p','[',']','\n',0,
