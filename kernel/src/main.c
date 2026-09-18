@@ -11,6 +11,7 @@
 #include "pmm.h"
 #include "paging.h"
 #include "serial.h"
+#include "scheduler.h"
 #include "shell.h"
 
 static boot_context_t boot_context;
@@ -32,6 +33,13 @@ static __attribute__((noreturn)) void kernel_after_paging(void) {
         halt_forever();
     }
     serial_write("JOSHOS_PAGING_PERMISSIONS_OK\n");
+
+    scheduler_init();
+    if (!scheduler_self_test()) {
+        serial_write("JOSHOS_ERROR_SCHEDULER_TEST\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_SCHEDULER_OK\n");
 
     heap_status_t heap_status = heap_kernel_init(&boot_context);
     if (heap_status != HEAP_OK) {
