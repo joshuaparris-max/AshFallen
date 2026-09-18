@@ -50,11 +50,11 @@ $(IMAGE).iso: limine-binary/limine kernel limine.conf
 	rm -rf iso_root
 
 run: $(IMAGE).iso
-	qemu-system-x86_64 -M q35 -m 512M -cdrom $(IMAGE).iso
+	qemu-system-x86_64 -M q35 -m 512M -cdrom $(IMAGE).iso -nic user,model=e1000
 
 smoke: $(IMAGE).iso
 	rm -f boot.log
-	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(IMAGE).iso -display none -serial stdio -no-reboot > boot.log 2>&1
+	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(IMAGE).iso -nic user,model=e1000 -display none -serial stdio -no-reboot > boot.log 2>&1
 	grep -q JOSHOS_CPU_FEATURES_OK boot.log
 	grep -q JOSHOS_NX_OK boot.log
 	grep -q JOSHOS_GDT_TSS_OK boot.log
@@ -68,6 +68,7 @@ smoke: $(IMAGE).iso
 	grep -q JOSHOS_HEAP_OK boot.log
 	grep -q JOSHOS_HEAP_SELF_TEST_OK boot.log
 	grep -q JOSHOS_PCI_OK boot.log
+	grep -q JOSHOS_E1000_OK boot.log
 	grep -q JOSHOS_NET_LOOPBACK_OK boot.log
 	grep -q JOSHOS_BOOT_OK boot.log
 	@echo "Josh OS boot smoke test passed."
