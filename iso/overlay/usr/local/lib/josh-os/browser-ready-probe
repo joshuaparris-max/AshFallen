@@ -141,6 +141,15 @@ else
   exit 1
 fi
 
+acceptance_log=/tmp/josh-os-browser-acceptance.log
+if runuser -u josh -- env HOME=/home/josh XDG_RUNTIME_DIR=/run/user/1000 node /usr/local/lib/josh-os/browser-acceptance.mjs >"$acceptance_log" 2>&1; then
+  emit_log "JOSHOS_BROWSER_TEST" "$acceptance_log"
+else
+  emit "JOSHOS_BROWSER_ACCEPTANCE_FAIL"
+  emit_log "JOSHOS_BROWSER_TEST" "$acceptance_log"
+  exit 1
+fi
+
 if [[ -e /run/josh-os-persistence-active ]]; then
   profile_probe="$profile/.josh-persistence-probe"
   downloads_probe="/home/josh/Downloads/.josh-persistence-probe"
