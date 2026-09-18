@@ -41,6 +41,9 @@ jobs:
       - name: Boot smoke test
         run: make smoke
 
+      - name: Keyboard IRQ smoke test
+        run: make keyboard-smoke
+
       - name: Exception fault smoke test
         run: make fault-smoke
 
