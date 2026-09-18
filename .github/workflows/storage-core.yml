@@ -1,0 +1,44 @@
+name: Native Storage Core Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/storage-core.yml'
+      - 'kernel/src/block.*'
+      - 'kernel/src/block_cache.*'
+      - 'kernel/src/partition.*'
+      - 'kernel/src/vfs.*'
+      - 'kernel/src/tmpfs.*'
+      - 'kernel/src/storage_services.*'
+      - 'kernel/tests/test_storage.c'
+      - 'kernel/tests/test_vfs.c'
+  pull_request:
+    paths:
+      - '.github/workflows/storage-core.yml'
+      - 'kernel/src/block.*'
+      - 'kernel/src/block_cache.*'
+      - 'kernel/src/partition.*'
+      - 'kernel/src/vfs.*'
+      - 'kernel/src/tmpfs.*'
+      - 'kernel/src/storage_services.*'
+      - 'kernel/tests/test_storage.c'
+      - 'kernel/tests/test_vfs.c'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  storage-core:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build and run block/partition/cache tests
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror -Ikernel/src             kernel/tests/test_storage.c             kernel/src/block.c kernel/src/block_cache.c kernel/src/partition.c             -o /tmp/test-storage
+          /tmp/test-storage
+      - name: Build and run VFS/tmpfs/service tests
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror -Ikernel/src             kernel/tests/test_vfs.c             kernel/src/vfs.c kernel/src/tmpfs.c kernel/src/storage_services.c             -o /tmp/test-vfs
+          /tmp/test-vfs
