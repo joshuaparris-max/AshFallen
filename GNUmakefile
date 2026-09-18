@@ -3,6 +3,7 @@
 
 IMAGE := JoshOS-0.1-x86_64
 FAULT_IMAGE := JoshOS-fault-test-x86_64
+DOUBLE_FAULT_IMAGE := JoshOS-double-fault-test-x86_64
 LIMINE_VERSION := 12.9.0
 LIMINE_SHA256 := 84059c93b4ea03994af6d614654c7095291388850ea7b258d64f9263abde5557
 LIMINE_URL := https://github.com/Limine-Bootloader/Limine/releases/download/v$(LIMINE_VERSION)/limine-binary.tar.gz
@@ -66,14 +67,27 @@ fault-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
 	grep -q JOSHOS_FAULT_TEST_UD2 fault-boot.log
 	grep -q 'VECTOR=0x0000000000000006' fault-boot.log
 	grep -q JOSHOS_PANIC_HALT fault-boot.log
-	@echo "Josh OS exception smoke test passed."
+	@echo "Josh OS invalid-opcode smoke test passed."
 	$(MAKE) -C kernel clean
 	rm -f fault-boot.log $(FAULT_IMAGE).iso
 
+	$(MAKE) IMAGE=$(DOUBLE_FAULT_IMAGE) EXTRA_CPPFLAGS=-DJOSHOS_FAULT_TEST_DOUBLE_FAULT $(DOUBLE_FAULT_IMAGE).iso
+	rm -f double-fault-boot.log
+	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(DOUBLE_FAULT_IMAGE).iso -display none -serial stdio -no-reboot > double-fault-boot.log 2>&1
+	grep -q JOSHOS_GDT_TSS_OK double-fault-boot.log
+	grep -q JOSHOS_IDT_OK double-fault-boot.log
+	grep -q JOSHOS_FAULT_TEST_DOUBLE_FAULT double-fault-boot.log
+	grep -q 'VECTOR=0x0000000000000008' double-fault-boot.log
+	grep -q 'ERROR=0x0000000000000000' double-fault-boot.log
+	grep -q JOSHOS_PANIC_HALT double-fault-boot.log
+	@echo "Josh OS double-fault smoke test passed."
+	$(MAKE) -C kernel clean
+	rm -f double-fault-boot.log $(DOUBLE_FAULT_IMAGE).iso
+
 clean:
 	$(MAKE) -C kernel clean
-	rm -rf iso_root boot.log fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso
+	rm -rf iso_root boot.log fault-boot.log double-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso
 
 distclean:
 	$(MAKE) -C kernel distclean
-	rm -rf iso_root boot.log fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso limine-binary limine-binary.tar.gz
+	rm -rf iso_root boot.log fault-boot.log double-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso limine-binary limine-binary.tar.gz
