@@ -207,6 +207,17 @@ josh_net_status_t josh_udp_parse(const void *segment, size_t length,
     return JOSH_NET_OK;
 }
 
+uint16_t josh_udp_checksum_ipv4(const uint8_t source_ip[4],
+                                const uint8_t destination_ip[4],
+                                const void *segment, size_t length) {
+    if (!source_ip || !destination_ip || (!segment && length != 0) ||
+        length > 65535u) {
+        return 0;
+    }
+    return transport_checksum_ipv4(
+        source_ip, destination_ip, JOSH_NET_IP_UDP, segment, length);
+}
+
 size_t josh_udp_build_ipv4(void *buffer, size_t capacity,
                            const uint8_t source_ip[4],
                            const uint8_t destination_ip[4],
@@ -220,8 +231,8 @@ size_t josh_udp_build_ipv4(void *buffer, size_t capacity,
     write_be16(p + 4, (uint16_t)(8u + payload_length));
     write_be16(p + 6, 0);
     if (payload_length) copy_bytes(p + 8, (const uint8_t *)payload, payload_length);
-    uint16_t checksum = transport_checksum_ipv4(
-        source_ip, destination_ip, JOSH_NET_IP_UDP, p, 8u + payload_length);
+    uint16_t checksum = josh_udp_checksum_ipv4(
+        source_ip, destination_ip, p, 8u + payload_length);
     if (checksum == 0) checksum = 0xffffu;
     write_be16(p + 6, checksum);
     return 8u + payload_length;
@@ -252,6 +263,69 @@ uint16_t josh_tcp_checksum_ipv4(const uint8_t source_ip[4],
                                 const void *segment, size_t length) {
     if (!source_ip || !destination_ip || (!segment && length != 0) || length > 65535u) return 0;
     return transport_checksum_ipv4(source_ip, destination_ip, JOSH_NET_IP_TCP, segment, length);
+}
+
+static size_t dhcp_build_base(void *buffer, size_t capacity,
+                              uint32_t xid, const uint8_t mac[6],
+                              uint8_t message_type,
+                              const uint8_t requested_ip[4],
+                              const uint8_t server_id[4]) {
+    if (!buffer || !mac || capacity < 256u) return 0;
+    uint8_t *p = (uint8_t *)buffer;
+    zero_bytes(p, 240);
+    p[0] = 1;
+    p[1] = 1;
+    p[2] = 6;
+    write_be32(p + 4, xid);
+    write_be16(p + 10, 0x8000u);
+    copy_bytes(p + 28, mac, 6);
+    write_be32(p + 236, 0x63825363u);
+
+    size_t offset = 240;
+    p[offset++] = 53;
+    p[offset++] = 1;
+    p[offset++] = message_type;
+
+    if (requested_ip) {
+        if (offset + 6u > capacity) return 0;
+        p[offset++] = 50;
+        p[offset++] = 4;
+        copy_bytes(p + offset, requested_ip, 4);
+        offset += 4;
+    }
+
+    if (server_id) {
+        if (offset + 6u > capacity) return 0;
+        p[offset++] = 54;
+        p[offset++] = 4;
+        copy_bytes(p + offset, server_id, 4);
+        offset += 4;
+    }
+
+    if (offset + 8u > capacity) return 0;
+    p[offset++] = 55;
+    p[offset++] = 5;
+    p[offset++] = 1;
+    p[offset++] = 3;
+    p[offset++] = 6;
+    p[offset++] = 51;
+    p[offset++] = 54;
+    p[offset++] = 255;
+    return offset;
+}
+
+size_t josh_dhcp_build_discover(void *buffer, size_t capacity,
+                                 uint32_t xid, const uint8_t mac[6]) {
+    return dhcp_build_base(buffer, capacity, xid, mac, 1, 0, 0);
+}
+
+size_t josh_dhcp_build_request(void *buffer, size_t capacity,
+                               uint32_t xid, const uint8_t mac[6],
+                               const uint8_t requested_ip[4],
+                               const uint8_t server_id[4]) {
+    if (!requested_ip || !server_id) return 0;
+    return dhcp_build_base(
+        buffer, capacity, xid, mac, 3, requested_ip, server_id);
 }
 
 josh_net_status_t josh_dhcp_parse_reply(const void *packet, size_t length,
