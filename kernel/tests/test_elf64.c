@@ -86,7 +86,7 @@ static void make_valid(uint8_t image[512]) {
     p->vaddr = 0x400000;
     p->filesz = 4;
     p->memsz = 8;
-    p->align = 0x1000;
+    p->align = 1;
 
     image[0x100] = 0xaa;
     image[0x101] = 0xbb;
