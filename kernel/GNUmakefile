@@ -62,7 +62,9 @@ C_SRC := $(shell find src -type f -name '*.c' | LC_ALL=C sort)
 ASM_SRC := $(shell find src -type f -name '*.S' | LC_ALL=C sort)
 OBJ := $(patsubst %.c,obj/%.o,$(C_SRC)) $(patsubst %.S,obj/%.o,$(ASM_SRC))
 DEPS := $(OBJ:.o=.d)
-HOST_TEST := obj-host/test_boot_josh
+HOST_TEST_BOOT := obj-host/test_boot_josh
+HOST_TEST_PMM := obj-host/test_pmm
+HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM)
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -81,12 +83,17 @@ obj/%.o: %.S
 	mkdir -p $(dir $@)
 	$(CC) $(ASFLAGS) $(CPPFLAGS) -c $< -o $@
 
-$(HOST_TEST): tests/test_boot_josh.c src/boot_josh.c src/boot.h src/boot_internal.h src/josh_boot_protocol.h
+$(HOST_TEST_BOOT): tests/test_boot_josh.c src/boot_josh.c src/boot.h src/boot_internal.h src/josh_boot_protocol.h
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_boot_josh.c src/boot_josh.c -o $@
 
-host-tests: $(HOST_TEST)
-	$(HOST_TEST)
+$(HOST_TEST_PMM): tests/test_pmm.c src/pmm.c src/pmm.h src/boot.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_pmm.c src/pmm.c -o $@
+
+host-tests: $(HOST_TESTS)
+	$(HOST_TEST_BOOT)
+	$(HOST_TEST_PMM)
 
 clean:
 	rm -rf bin obj obj-host
