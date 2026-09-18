@@ -5,6 +5,7 @@
 #include "gfx.h"
 #include "interrupts.h"
 #include "keyboard.h"
+#include "pci.h"
 #include "serial.h"
 #include "shell.h"
 
@@ -130,6 +131,11 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
     }
     if (boot.smbios_phys != 0) {
         serial_write("JOSHOS_SMBIOS_OK\n");
+    }
+
+    pci_scan_summary_t pci_summary;
+    if (pci_init(&pci_summary) != 0) {
+        serial_write("JOSHOS_ERROR_PCI_INIT\n");
     }
 
     gfx_init(&boot.framebuffer);
