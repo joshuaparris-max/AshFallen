@@ -67,7 +67,8 @@ HOST_TEST_PMM := obj-host/test_pmm
 HOST_TEST_CPU := obj-host/test_cpu
 HOST_TEST_HEAP := obj-host/test_heap
 HOST_TEST_NET := obj-host/test_net_proto
-HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET)
+HOST_TEST_NETDEV := obj-host/test_net
+HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET) $(HOST_TEST_NETDEV)
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -106,12 +107,17 @@ $(HOST_TEST_NET): tests/test_net_proto.c src/net_proto.c src/net_proto.h
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_net_proto.c src/net_proto.c -o $@
 
+$(HOST_TEST_NETDEV): tests/test_net.c src/net.c src/net.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_net.c src/net.c -o $@
+
 host-tests: $(HOST_TESTS)
 	$(HOST_TEST_BOOT)
 	$(HOST_TEST_PMM)
 	$(HOST_TEST_CPU)
 	$(HOST_TEST_HEAP)
 	$(HOST_TEST_NET)
+	$(HOST_TEST_NETDEV)
 
 clean:
 	rm -rf bin obj obj-host
