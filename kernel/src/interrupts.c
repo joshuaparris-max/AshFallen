@@ -5,6 +5,7 @@
 
 #define IDT_ENTRIES 256
 #define IDT_GATE_INTERRUPT 0x8E
+#define IDT_GATE_USER_INTERRUPT 0xEE
 
 typedef struct {
     uint16_t offset_low;
@@ -22,6 +23,7 @@ typedef struct {
 } __attribute__((packed)) idtr_t;
 
 extern const uintptr_t exception_stub_table[32];
+extern void syscall_entry(void);
 
 _Static_assert(__builtin_offsetof(exception_frame_t, rax) == 0, "exception frame rax offset");
 _Static_assert(__builtin_offsetof(exception_frame_t, r15) == 112, "exception frame r15 offset");
@@ -129,6 +131,9 @@ void interrupts_init(void) {
         uint8_t ist = vector == 8 ? GDT_DOUBLE_FAULT_IST_INDEX : 0;
         idt_set_gate(vector, exception_stub_table[vector], selector, ist);
     }
+
+    idt_set_gate(0x80u, (uintptr_t)syscall_entry, selector, 0);
+    idt[0x80u].type_attr = IDT_GATE_USER_INTERRUPT;
 
     idtr_t idtr = {
         .limit = (uint16_t)(sizeof(idt) - 1),

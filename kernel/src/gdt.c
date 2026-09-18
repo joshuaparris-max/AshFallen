@@ -31,8 +31,10 @@ _Static_assert(sizeof(tss64_t) == 104, "x86-64 TSS layout changed");
 _Static_assert(GDT_KERNEL_CODE_SELECTOR == 0x08u, "assembly selector must match GDT");
 _Static_assert(GDT_KERNEL_DATA_SELECTOR == 0x10u, "assembly selector must match GDT");
 _Static_assert(GDT_TSS_SELECTOR == 0x18u, "assembly selector must match GDT");
+_Static_assert(GDT_USER_DATA_SELECTOR == 0x2Bu, "Ring 3 data selector must match GDT");
+_Static_assert(GDT_USER_CODE_SELECTOR == 0x33u, "Ring 3 code selector must match GDT");
 
-static uint64_t gdt[5] __attribute__((aligned(16)));
+static uint64_t gdt[7] __attribute__((aligned(16)));
 static tss64_t tss __attribute__((aligned(16)));
 static uint8_t double_fault_stack[DOUBLE_FAULT_STACK_SIZE] __attribute__((aligned(16)));
 
@@ -57,6 +59,8 @@ int gdt_init(void) {
     gdt[0] = 0;
     gdt[1] = UINT64_C(0x00209A0000000000);
     gdt[2] = UINT64_C(0x0000920000000000);
+    gdt[5] = UINT64_C(0x0000F20000000000);
+    gdt[6] = UINT64_C(0x0020FA0000000000);
 
     tss.ist1 = (uint64_t)(uintptr_t)(double_fault_stack + sizeof(double_fault_stack));
     tss.iomap_base = (uint16_t)sizeof(tss);
@@ -95,4 +99,9 @@ int gdt_init(void) {
     __asm__ volatile ("str %0" : "=r"(tr));
 
     return cs == GDT_KERNEL_CODE_SELECTOR && tr == GDT_TSS_SELECTOR;
+}
+
+
+void gdt_set_kernel_stack(uint64_t rsp0) {
+    tss.rsp0 = rsp0;
 }
