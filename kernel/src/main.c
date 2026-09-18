@@ -2,6 +2,7 @@
 #include "boot.h"
 #include "desktop.h"
 #include "gfx.h"
+#include "interrupts.h"
 #include "keyboard.h"
 #include "serial.h"
 #include "shell.h"
@@ -31,6 +32,14 @@ static void report_boot_error(boot_status_t status) {
 void kmain(void) {
     serial_init();
     serial_write("JOSHOS_KERNEL_ENTERED\n");
+
+    interrupts_init();
+    serial_write("JOSHOS_IDT_OK\n");
+
+#ifdef JOSHOS_FAULT_TEST_UD2
+    serial_write("JOSHOS_FAULT_TEST_UD2\n");
+    __asm__ volatile ("ud2");
+#endif
 
     boot_context_t boot;
     boot_status_t status = boot_context_init(&boot);
