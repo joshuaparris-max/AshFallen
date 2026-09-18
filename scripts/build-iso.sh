@@ -71,6 +71,7 @@ packages=(
   pipewire-audio
   pipewire-pulse
   procps-ng
+  python
   ttf-dejavu
   vulkan-intel
   vulkan-radeon
@@ -116,6 +117,7 @@ file_permissions["/usr/local/bin/josh-os-browser-diagnostics"]="0:0:0755"
 file_permissions["/usr/local/bin/josh-youtube-acceptance"]="0:0:0755"
 file_permissions["/usr/local/bin/josh-network-check"]="0:0:0755"
 file_permissions["/usr/local/bin/josh-wifi"]="0:0:0755"
+file_permissions["/usr/local/lib/josh-os/network-control.py"]="0:0:0755"
 file_permissions["/usr/local/lib/josh-os/prepare-persistent-home"]="0:0:0755"
 file_permissions["/usr/local/lib/josh-os/browser-ready-probe"]="0:0:0755"
 file_permissions["/usr/local/lib/josh-os/browser-media-probe"]="0:0:0755"
@@ -124,6 +126,7 @@ PROFILE
 
 mkdir -p "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants"
 mkdir -p "$GENERATED_PROFILE/airootfs/etc/systemd/system/graphical.target.wants"
+mkdir -p "$GENERATED_PROFILE/airootfs/etc/systemd/system/network-online.target.wants"
 ln -sfn /usr/lib/systemd/system/graphical.target "$GENERATED_PROFILE/airootfs/etc/systemd/system/default.target"
 ln -sfn /usr/lib/systemd/system/lightdm.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/display-manager.service"
 
@@ -137,6 +140,8 @@ rm -f \
 ln -sfn /usr/lib/systemd/system/josh-os-persistence.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/josh-os-persistence.service"
 ln -sfn /usr/lib/systemd/system/josh-os-browser-ready.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/graphical.target.wants/josh-os-browser-ready.service"
 ln -sfn /usr/lib/systemd/system/NetworkManager.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/NetworkManager.service"
+ln -sfn /usr/lib/systemd/system/NetworkManager-wait-online.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/network-online.target.wants/NetworkManager-wait-online.service"
+ln -sfn /usr/lib/systemd/system/josh-network-control.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/josh-network-control.service"
 ln -sfn /usr/lib/systemd/system/systemd-resolved.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/systemd-resolved.service"
 ln -sfn /usr/lib/systemd/system/systemd-timesyncd.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/systemd-timesyncd.service"
 ln -sfn /usr/lib/systemd/system/vboxservice.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/vboxservice.service"
