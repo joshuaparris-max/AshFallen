@@ -76,6 +76,13 @@ boot_status_t boot_josh_context_init(boot_context_t *context, const JoshBootInfo
     status = validate_framebuffer(&info->framebuffer);
     if (status != BOOT_OK) return status;
 
+    if ((info->flags & JOSH_BOOT_FLAG_RSDP) != 0 && info->rsdp_phys == 0) {
+        return BOOT_INVALID_BOOT_INFO;
+    }
+    if ((info->flags & JOSH_BOOT_FLAG_SMBIOS) != 0 && info->smbios_phys == 0) {
+        return BOOT_INVALID_BOOT_INFO;
+    }
+
     context->framebuffer.address = (void *)(uintptr_t)info->framebuffer.address;
     context->framebuffer.width = info->framebuffer.width;
     context->framebuffer.height = info->framebuffer.height;
@@ -88,5 +95,9 @@ boot_status_t boot_josh_context_init(boot_context_t *context, const JoshBootInfo
     context->framebuffer.blue_mask_size = (uint8_t)info->framebuffer.blue_mask_size;
     context->framebuffer.blue_mask_shift = (uint8_t)info->framebuffer.blue_mask_shift;
     context->usable_memory_mib = usable_bytes / (1024u * 1024u);
+    context->rsdp_phys =
+        (info->flags & JOSH_BOOT_FLAG_RSDP) != 0 ? info->rsdp_phys : 0;
+    context->smbios_phys =
+        (info->flags & JOSH_BOOT_FLAG_SMBIOS) != 0 ? info->smbios_phys : 0;
     return BOOT_OK;
 }
