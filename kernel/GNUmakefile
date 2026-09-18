@@ -64,7 +64,9 @@ OBJ := $(patsubst %.c,obj/%.o,$(C_SRC)) $(patsubst %.S,obj/%.o,$(ASM_SRC))
 DEPS := $(OBJ:.o=.d)
 HOST_TEST_BOOT := obj-host/test_boot_josh
 HOST_TEST_PMM := obj-host/test_pmm
-HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM)
+HOST_TEST_STORAGE := obj-host/test_storage
+HOST_TEST_VFS := obj-host/test_vfs
+HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_STORAGE) $(HOST_TEST_VFS)
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -91,9 +93,19 @@ $(HOST_TEST_PMM): tests/test_pmm.c src/pmm.c src/pmm.h src/boot.h
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_pmm.c src/pmm.c -o $@
 
+$(HOST_TEST_STORAGE): tests/test_storage.c src/block.c src/block.h src/block_cache.c src/block_cache.h src/partition.c src/partition.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_storage.c src/block.c src/block_cache.c src/partition.c -o $@
+
+$(HOST_TEST_VFS): tests/test_vfs.c src/vfs.c src/vfs.h src/tmpfs.c src/tmpfs.h src/storage_services.c src/storage_services.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_vfs.c src/vfs.c src/tmpfs.c src/storage_services.c -o $@
+
 host-tests: $(HOST_TESTS)
 	$(HOST_TEST_BOOT)
 	$(HOST_TEST_PMM)
+	$(HOST_TEST_STORAGE)
+	$(HOST_TEST_VFS)
 
 clean:
 	rm -rf bin obj obj-host
