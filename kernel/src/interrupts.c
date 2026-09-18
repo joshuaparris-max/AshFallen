@@ -159,3 +159,15 @@ void interrupts_init(void) {
     };
     __asm__ volatile ("lidt %0" :: "m"(idtr) : "memory");
 }
+
+#ifdef JOSHOS_FAULT_TEST_DOUBLE_FAULT
+void interrupts_arm_double_fault_test(void) {
+    /*
+     * Make #GP delivery itself fail by replacing its code selector with the
+     * null selector. Triggering #GP after this forces the CPU down the #DF path.
+     * Vector 8 remains valid and uses TSS IST1, so the panic path gets a fresh
+     * emergency stack instead of recursively using the damaged delivery path.
+     */
+    idt[13].selector = 0;
+}
+#endif
