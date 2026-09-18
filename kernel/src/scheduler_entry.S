@@ -6,6 +6,12 @@ scheduler_enter_user:
     movq %rsp, scheduler_saved_kernel_rsp(%rip)
     movq %cr3, %rax
     movq %rax, scheduler_saved_kernel_cr3(%rip)
+    movq %rbx, scheduler_saved_rbx(%rip)
+    movq %rbp, scheduler_saved_rbp(%rip)
+    movq %r12, scheduler_saved_r12(%rip)
+    movq %r13, scheduler_saved_r13(%rip)
+    movq %r14, scheduler_saved_r14(%rip)
+    movq %r15, scheduler_saved_r15(%rip)
 
     leaq scheduler_bootstrap_stack_top(%rip), %rsp
 
@@ -46,6 +52,12 @@ scheduler_enter_user:
 scheduler_return_to_kernel:
     movq scheduler_saved_kernel_cr3(%rip), %rax
     movq %rax, %cr3
+    movq scheduler_saved_rbx(%rip), %rbx
+    movq scheduler_saved_rbp(%rip), %rbp
+    movq scheduler_saved_r12(%rip), %r12
+    movq scheduler_saved_r13(%rip), %r13
+    movq scheduler_saved_r14(%rip), %r14
+    movq scheduler_saved_r15(%rip), %r15
     movq scheduler_saved_kernel_rsp(%rip), %rsp
     ret
 .size scheduler_return_to_kernel, .-scheduler_return_to_kernel
@@ -55,6 +67,18 @@ scheduler_return_to_kernel:
 scheduler_saved_kernel_rsp:
     .quad 0
 scheduler_saved_kernel_cr3:
+    .quad 0
+scheduler_saved_rbx:
+    .quad 0
+scheduler_saved_rbp:
+    .quad 0
+scheduler_saved_r12:
+    .quad 0
+scheduler_saved_r13:
+    .quad 0
+scheduler_saved_r14:
+    .quad 0
+scheduler_saved_r15:
     .quad 0
 
 .align 16
