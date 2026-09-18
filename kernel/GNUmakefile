@@ -71,7 +71,8 @@ HOST_TEST_NETDEV := obj-host/test_net
 HOST_TEST_SPINLOCK := obj-host/test_spinlock
 HOST_TEST_ACPI := obj-host/test_acpi
 HOST_TEST_APIC_ROUTE := obj-host/test_apic_route
-HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET) $(HOST_TEST_NETDEV) $(HOST_TEST_SPINLOCK) $(HOST_TEST_ACPI) $(HOST_TEST_APIC_ROUTE)
+HOST_TEST_USER_ELF := obj-host/test_user_elf
+HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET) $(HOST_TEST_NETDEV) $(HOST_TEST_SPINLOCK) $(HOST_TEST_ACPI) $(HOST_TEST_APIC_ROUTE) $(HOST_TEST_USER_ELF)
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -126,6 +127,10 @@ $(HOST_TEST_APIC_ROUTE): tests/test_apic_route.c src/apic_route.c src/apic.h src
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_apic_route.c src/apic_route.c -o $@
 
+$(HOST_TEST_USER_ELF): tests/test_user_elf.c src/user_elf.c src/user_elf.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_user_elf.c src/user_elf.c -o $@
+
 host-tests: $(HOST_TESTS)
 	$(HOST_TEST_BOOT)
 	$(HOST_TEST_PMM)
@@ -136,6 +141,7 @@ host-tests: $(HOST_TESTS)
 	$(HOST_TEST_SPINLOCK)
 	$(HOST_TEST_ACPI)
 	$(HOST_TEST_APIC_ROUTE)
+	$(HOST_TEST_USER_ELF)
 
 clean:
 	rm -rf bin obj obj-host
