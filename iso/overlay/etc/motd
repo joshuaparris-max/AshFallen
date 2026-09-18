@@ -1,0 +1,5 @@
+Josh OS Stage 0 Live
+
+The graphical session should start automatically on tty1.
+For diagnostics, use Ctrl+Alt+F2 and log in through the graphical session's
+terminal tooling or return to tty1 with Ctrl+Alt+F1.
