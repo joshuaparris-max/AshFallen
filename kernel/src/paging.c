@@ -300,6 +300,18 @@ paging_status_t paging_init(boot_context_t *boot) {
     return PAGING_OK;
 }
 
+paging_status_t paging_map_page(uint64_t virtual_address, uint64_t physical_address) {
+    if (root_phys == 0) return PAGING_BAD_ARGUMENT;
+    page_table_t *root = table_ptr(root_phys);
+    if (!root) return PAGING_UNSUPPORTED_LAYOUT;
+
+    paging_status_t status = map_4k(root, virtual_address, physical_address);
+    if (status != PAGING_OK) return status;
+
+    __asm__ volatile ("invlpg (%0)" : : "r"((uintptr_t)virtual_address) : "memory");
+    return PAGING_OK;
+}
+
 uint64_t paging_root_phys(void) {
     return root_phys;
 }
