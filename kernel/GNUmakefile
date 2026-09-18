@@ -3,6 +3,7 @@
 
 OUTPUT := kernel
 CC := clang
+HOSTCC ?= cc
 
 CFLAGS := \
 	-target x86_64-unknown-none-elf \
@@ -50,8 +51,9 @@ LDFLAGS := \
 SRC := $(shell find src -type f -name '*.c' | LC_ALL=C sort)
 OBJ := $(patsubst %.c,obj/%.o,$(SRC))
 DEPS := $(OBJ:.o=.d)
+HOST_TEST := obj-host/test_boot_josh
 
-.PHONY: all clean distclean
+.PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
 
 -include $(DEPS)
@@ -64,8 +66,15 @@ obj/%.o: %.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
 
+$(HOST_TEST): tests/test_boot_josh.c src/boot_josh.c src/boot.h src/boot_internal.h src/josh_boot_protocol.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_boot_josh.c src/boot_josh.c -o $@
+
+host-tests: $(HOST_TEST)
+	$(HOST_TEST)
+
 clean:
-	rm -rf bin obj
+	rm -rf bin obj obj-host
 
 distclean: clean
 	rm -rf .deps-obtained freestanding-c-hdrs limine-protocol

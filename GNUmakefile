@@ -6,7 +6,7 @@ LIMINE_VERSION := 12.9.0
 LIMINE_SHA256 := 84059c93b4ea03994af6d614654c7095291388850ea7b258d64f9263abde5557
 LIMINE_URL := https://github.com/Limine-Bootloader/Limine/releases/download/v$(LIMINE_VERSION)/limine-binary.tar.gz
 
-.PHONY: all kernel run smoke clean distclean
+.PHONY: all kernel host-tests run smoke clean distclean
 all: $(IMAGE).iso
 
 limine-binary.tar.gz:
@@ -23,6 +23,9 @@ kernel/.deps-obtained:
 
 kernel: kernel/.deps-obtained
 	$(MAKE) -C kernel
+
+host-tests:
+	$(MAKE) -C kernel host-tests
 
 $(IMAGE).iso: limine-binary/limine kernel limine.conf
 	rm -rf iso_root

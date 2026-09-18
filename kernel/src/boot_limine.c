@@ -1,4 +1,4 @@
-#include "boot.h"
+#include "boot_internal.h"
 #include <limine.h>
 #include <stddef.h>
 #include <stdint.h>
@@ -33,30 +33,22 @@ static int framebuffer_valid(const struct limine_framebuffer *fb) {
     if (!fb || !fb->address) return 0;
     if (fb->memory_model != LIMINE_FRAMEBUFFER_RGB || fb->bpp != 32) return 0;
     if (fb->width == 0 || fb->height == 0 || fb->pitch == 0) return 0;
-
     if (fb->width > UINT64_MAX / 4u) return 0;
     uint64_t minimum_pitch = fb->width * 4u;
     if (fb->pitch < minimum_pitch || (fb->pitch & 3u) != 0u) return 0;
-
     if (fb->height > UINT64_MAX / fb->pitch) return 0;
-
     if (!mask_valid(fb->red_mask_size, fb->red_mask_shift) ||
         !mask_valid(fb->green_mask_size, fb->green_mask_shift) ||
-        !mask_valid(fb->blue_mask_size, fb->blue_mask_shift)) {
-        return 0;
-    }
-
+        !mask_valid(fb->blue_mask_size, fb->blue_mask_shift)) return 0;
     return 1;
 }
 
 static uint64_t usable_memory_mib(void) {
     if (!memmap_request.response) return 0;
-
     uint64_t bytes = 0;
     for (uint64_t i = 0; i < memmap_request.response->entry_count; ++i) {
         struct limine_memmap_entry *entry = memmap_request.response->entries[i];
         if (!entry || entry->type != LIMINE_MEMMAP_USABLE) continue;
-
         if (UINT64_MAX - bytes < entry->length) {
             bytes = UINT64_MAX;
             break;
@@ -66,22 +58,14 @@ static uint64_t usable_memory_mib(void) {
     return bytes / (1024u * 1024u);
 }
 
-boot_status_t boot_context_init(boot_context_t *context) {
+boot_status_t boot_limine_context_init(boot_context_t *context) {
     if (!context) return BOOT_UNSUPPORTED_PROTOCOL;
-
-    if (!LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision)) {
-        return BOOT_UNSUPPORTED_PROTOCOL;
-    }
-
-    if (!framebuffer_request.response ||
-        framebuffer_request.response->framebuffer_count < 1) {
+    if (!LIMINE_BASE_REVISION_SUPPORTED(limine_base_revision)) return BOOT_UNSUPPORTED_PROTOCOL;
+    if (!framebuffer_request.response || framebuffer_request.response->framebuffer_count < 1) {
         return BOOT_NO_FRAMEBUFFER;
     }
-
     struct limine_framebuffer *fb = framebuffer_request.response->framebuffers[0];
-    if (!framebuffer_valid(fb)) {
-        return BOOT_UNSUPPORTED_FRAMEBUFFER;
-    }
+    if (!framebuffer_valid(fb)) return BOOT_UNSUPPORTED_FRAMEBUFFER;
 
     context->framebuffer.address = fb->address;
     context->framebuffer.width = fb->width;
@@ -95,6 +79,5 @@ boot_status_t boot_context_init(boot_context_t *context) {
     context->framebuffer.blue_mask_size = fb->blue_mask_size;
     context->framebuffer.blue_mask_shift = fb->blue_mask_shift;
     context->usable_memory_mib = usable_memory_mib();
-
     return BOOT_OK;
 }

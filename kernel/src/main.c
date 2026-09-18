@@ -15,6 +15,12 @@ static void report_boot_error(boot_status_t status) {
         case BOOT_UNSUPPORTED_PROTOCOL:
             serial_write("JOSHOS_ERROR_UNSUPPORTED_BOOT_PROTOCOL\n");
             break;
+        case BOOT_INVALID_BOOT_INFO:
+            serial_write("JOSHOS_ERROR_INVALID_BOOT_INFO\n");
+            break;
+        case BOOT_NO_MEMORY_MAP:
+            serial_write("JOSHOS_ERROR_NO_MEMORY_MAP\n");
+            break;
         case BOOT_NO_FRAMEBUFFER:
             serial_write("JOSHOS_ERROR_NO_FRAMEBUFFER\n");
             break;
@@ -28,12 +34,12 @@ static void report_boot_error(boot_status_t status) {
     }
 }
 
-void kmain(void) {
+void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_payload) {
     serial_init();
     serial_write("JOSHOS_KERNEL_ENTERED\n");
 
     boot_context_t boot;
-    boot_status_t status = boot_context_init(&boot);
+    boot_status_t status = boot_context_init(&boot, loader_magic1, loader_magic2, loader_payload);
     if (status != BOOT_OK) {
         report_boot_error(status);
         halt_forever();

@@ -1,7 +1,6 @@
 #ifndef JOSHOS_BOOT_H
 #define JOSHOS_BOOT_H
 
-#include <stdbool.h>
 #include <stdint.h>
 
 typedef struct {
@@ -26,17 +25,15 @@ typedef struct {
 typedef enum {
     BOOT_OK = 0,
     BOOT_UNSUPPORTED_PROTOCOL,
+    BOOT_INVALID_BOOT_INFO,
+    BOOT_NO_MEMORY_MAP,
     BOOT_NO_FRAMEBUFFER,
     BOOT_UNSUPPORTED_FRAMEBUFFER
 } boot_status_t;
 
-/*
- * Build a Josh-owned boot context from the active boot protocol.
- *
- * Today the implementation is Limine. Keeping the rest of the kernel behind
- * this boundary means a future JoshBootloader/JoshBootInfo adapter can replace
- * Limine without teaching graphics, shell or desktop code about boot protocols.
- */
-boot_status_t boot_context_init(boot_context_t *context);
+boot_status_t boot_context_init(boot_context_t *context,
+                                uint64_t loader_magic1,
+                                uint64_t loader_magic2,
+                                const void *loader_payload);
 
 #endif
