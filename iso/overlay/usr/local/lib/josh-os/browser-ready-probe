@@ -1,0 +1,57 @@
+#!/usr/bin/env bash
+set -u
+
+serial="/dev/ttyS0"
+emit() {
+  local message="$1"
+  logger -t josh-os-browser-probe "$message"
+  if [[ -w "$serial" ]]; then
+    printf '%s\r\n' "$message" >"$serial"
+  fi
+}
+
+ready=0
+for _ in $(seq 1 60); do
+  browser_ok=0
+  audio_ok=0
+  keyring_ok=0
+
+  if pgrep -u josh -x chromium >/dev/null 2>&1 || pgrep -u josh -f '/usr/lib/chromium/chromium' >/dev/null 2>&1; then
+    browser_ok=1
+  fi
+
+  if runuser -u josh -- env XDG_RUNTIME_DIR=/run/user/1000 pactl info >/dev/null 2>&1; then
+    audio_ok=1
+  fi
+
+  if pgrep -u josh -x gnome-keyring-daemon >/dev/null 2>&1; then
+    keyring_ok=1
+  fi
+
+  if (( browser_ok && audio_ok && keyring_ok )); then
+    ready=1
+    break
+  fi
+  sleep 1
+done
+
+if (( ! ready )); then
+  emit "JOSHOS_BROWSER_READY_FAIL"
+  exit 1
+fi
+
+emit "JOSHOS_BROWSER_READY"
+
+if [[ -e /run/josh-os-persistence-active ]]; then
+  probe_file="/home/josh/.josh-browser-persistence-probe"
+  if [[ -f "$probe_file" ]]; then
+    emit "JOSHOS_BROWSER_PERSISTENCE_OK"
+  else
+    printf 'persistent browser home probe\n' >"$probe_file"
+    chown josh:josh "$probe_file"
+    sync
+    emit "JOSHOS_BROWSER_PERSISTENCE_PRIMED"
+  fi
+else
+  emit "JOSHOS_BROWSER_PERSISTENCE_INACTIVE"
+fi

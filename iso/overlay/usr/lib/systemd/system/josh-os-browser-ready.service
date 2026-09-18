@@ -1,0 +1,12 @@
+[Unit]
+Description=Josh OS browser readiness probe
+After=display-manager.service josh-os-persistence.service
+Wants=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/josh-os/browser-ready-probe
+TimeoutStartSec=75
+
+[Install]
+WantedBy=graphical.target
