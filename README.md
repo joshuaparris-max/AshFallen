@@ -34,7 +34,8 @@ It now includes:
 - light/dark themes, accents and wallpapers;
 - About, Files, Terminal, Text Editor and Settings apps;
 - a shared design-token system;
-- an ArchISO pipeline that boots the Josh desktop full-screen in Chromium kiosk mode.
+- an ArchISO pipeline that boots the Josh desktop full-screen in Chromium kiosk mode;
+- a Stage 0 internet platform using NetworkManager for DHCP/Wi-Fi/IPv4/IPv6, systemd-resolved for DNS, systemd-timesyncd for clock sync, system CA certificates for TLS, plus `josh-wifi` and `josh-network-check` diagnostics.
 
 GitHub Actions builds this as the **JoshOS-Stage0-Live-x86_64** artifact.
 
