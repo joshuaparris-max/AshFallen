@@ -11,8 +11,8 @@ The long-term aim is a coherent system that combines the openness of Linux, the 
 Josh OS currently spans three related repositories with different jobs:
 
 - **[joshuaparris-max/AshFallen](https://github.com/joshuaparris-max/AshFallen)** — the **canonical Josh OS integration repository**. It contains both the Linux-backed product track and the independent x86-64 Josh kernel track.
-- **[Parris-Tech-Services/transfer2](https://github.com/Parris-Tech-Services/transfer2)** — a **Stage 0 product-track extraction/prototype** focused on the browser shell and ArchISO live image. It is useful for iterating on the desktop experience, but it is not the canonical native-kernel repository.
-- **[Parris-Tech-Services/MIDIVisualizer](https://github.com/Parris-Tech-Services/MIDIVisualizer)** — the **JoshBIOS / firmware / bootloader research stack**. Its `boot/`, `firmware/` and small `kernel/` payload are exploring the power-on-to-kernel handoff independently of the main Josh OS kernel.
+- **[Parris-Tech-Services/JoshOS-Stage0](https://github.com/Parris-Tech-Services/JoshOS-Stage0)** — a **Stage 0 product-track extraction/prototype** focused on the browser shell and ArchISO live image. It is useful for iterating on the desktop experience, but it is not the canonical native-kernel repository.
+- **[Parris-Tech-Services/JoshBIOS](https://github.com/Parris-Tech-Services/JoshBIOS)** — the **JoshBIOS / firmware / bootloader research stack**. Its `boot/`, `firmware/` and small `kernel/` payload are exploring the power-on-to-kernel handoff independently of the main Josh OS kernel.
 
 The current native Josh OS kernel boots through **Limine**. JoshBIOS does **not** currently boot this kernel. The intended future integration point is a versioned boot ABI: once JoshBootloader can load ELF64/x86-64 kernels and provide the required memory/framebuffer/firmware information, it can become an alternative boot path into the canonical Josh OS kernel.
 
