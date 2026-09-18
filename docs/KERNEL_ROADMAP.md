@@ -14,6 +14,12 @@ The kernel already boots through Limine, receives a framebuffer and memory map, 
 6. The kernel exposes mechanisms; policy belongs in userspace where practical.
 7. Security boundaries are architectural, not a final polishing pass.
 
+## First physical target
+
+The first selected physical development machine is **DadLAN Laptop #10 / Compaq 610**. Current status is **Selected**, not supported. The exact machine inventory, boot-test sequence and firmware recovery gates are owned by [JoshBIOS's Compaq 610 hardware target document](https://github.com/Parris-Tech-Services/JoshBIOS/blob/main/docs/HARDWARE_TARGET_COMPAQ_610.md).
+
+Use this machine to drive concrete early decisions, but keep hardware-specific quirks behind the appropriate platform or driver boundary. Do not fork the Josh kernel for this laptop, and do not infer generic PC support from success on this one target.
+
 ---
 
 ## K0 — Boot contract hardening
@@ -371,7 +377,7 @@ Test:
 
 ### Physical
 
-Add hardware only to the support matrix after repeated cold boots and documented subsystem results.
+Start with the selected Compaq 610 target. Record each subsystem result rather than using a single pass/fail label. Add it to the support matrix only after repeated cold boots and documented subsystem results; add further hardware only after the first target has a repeatable baseline.
 
 ---
 
