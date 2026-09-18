@@ -54,6 +54,15 @@ smoke: $(IMAGE).iso
 	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(IMAGE).iso -display none -serial stdio -no-reboot > boot.log 2>&1
 	grep -q JOSHOS_GDT_TSS_OK boot.log
 	grep -q JOSHOS_IDT_OK boot.log
+	grep -q JOSHOS_PROCESSES_READY boot.log
+	grep -q JOSHOS_RING3_ENTERED boot.log
+	grep -q JOSHOS_SYSCALL_ABI_OK boot.log
+	grep -q JOSHOS_USER_EFAULT_OK boot.log
+	grep -q JOSHOS_USER_INIT_1 boot.log
+	grep -q JOSHOS_USER_INIT_2 boot.log
+	grep -q JOSHOS_USER_RESUMED_1 boot.log
+	grep -q JOSHOS_USER_RESUMED_2 boot.log
+	grep -q JOSHOS_USERSPACE_OK boot.log
 	grep -q JOSHOS_BOOT_OK boot.log
 	@echo "Josh OS boot smoke test passed."
 
