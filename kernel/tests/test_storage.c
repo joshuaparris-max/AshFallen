@@ -1,4 +1,5 @@
 #include "block.h"
+#include "block_cache.h"
 #include "partition.h"
 #include <stdint.h>
 #include <stdio.h>
@@ -10,6 +11,8 @@
 static uint8_t disk[SECTOR_SIZE * SECTORS];
 static int failures;
 static int flushes;
+static int backend_reads;
+static int backend_writes;
 
 static void expect(const char *name, int condition) {
     if (!condition) {
@@ -19,12 +22,14 @@ static void expect(const char *name, int condition) {
 }
 
 static block_status_t mem_read(void *context, uint64_t lba, uint32_t count, void *buffer) {
+    backend_reads++;
     uint8_t *bytes = context;
     memcpy(buffer, bytes + lba * SECTOR_SIZE, (size_t)count * SECTOR_SIZE);
     return BLOCK_OK;
 }
 
 static block_status_t mem_write(void *context, uint64_t lba, uint32_t count, const void *buffer) {
+    backend_writes++;
     uint8_t *bytes = context;
     memcpy(bytes + lba * SECTOR_SIZE, buffer, (size_t)count * SECTOR_SIZE);
     return BLOCK_OK;
@@ -137,6 +142,24 @@ int main(void) {
 
     block_device_t ro = make_device(0);
     expect("read-only write rejected", block_write(&ro, 0, 1, sector) == BLOCK_READ_ONLY);
+
+    block_cache_t cache;
+    block_cache_init(&cache);
+    memset(disk + 7 * SECTOR_SIZE, 0x33, SECTOR_SIZE);
+    backend_reads = 0;
+    memset(sector, 0, sizeof(sector));
+    expect("cache miss read", block_cache_read(&cache, &device, 7, sector) == BLOCK_OK &&
+           sector[0] == 0x33 && backend_reads == 1 && cache.misses == 1);
+    memset(sector, 0, sizeof(sector));
+    expect("cache hit read", block_cache_read(&cache, &device, 7, sector) == BLOCK_OK &&
+           sector[0] == 0x33 && backend_reads == 1 && cache.hits == 1);
+    memset(sector, 0x44, sizeof(sector));
+    backend_writes = 0;
+    expect("cache write-through", block_cache_write(&cache, &device, 7, sector) == BLOCK_OK &&
+           backend_writes == 1 && disk[7 * SECTOR_SIZE] == 0x44);
+    int flush_before = flushes;
+    expect("cache flush", block_cache_flush(&cache, &device) == BLOCK_OK &&
+           flushes == flush_before + 1);
 
     make_mbr();
     partition_table_t table;
