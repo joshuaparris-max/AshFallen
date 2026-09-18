@@ -26,62 +26,10 @@ jobs:
           bash -n scripts/build-iso.sh
           bash -n iso/overlay/usr/local/bin/josh-network-check
           bash -n iso/overlay/usr/local/bin/josh-wifi
-          grep -q '^  networkmanager
-        run: |
-          docker run --rm --privileged \
-            -v "$PWD:/work" \
-            -w /work \
-            archlinux:latest \
-            bash -lc 'pacman -Syu --noconfirm archiso git && bash ./scripts/build-iso.sh'
-
-      - name: Take ownership of build output
-        run: sudo chown -R "$(id -u):$(id -g)" out
-
-      - name: Show ISO metadata
-        run: |
-          ls -lh out/*.iso
-          sha256sum out/*.iso | tee out/SHA256SUMS
-
-      - name: Upload bootable ISO
-        uses: actions/upload-artifact@v4
-        with:
-          name: JoshOS-Stage0-Live-x86_64
-          path: |
-            out/*.iso
-            out/SHA256SUMS
-          if-no-files-found: error
-          compression-level: 0
-          retention-days: 14
- scripts/build-iso.sh
-          grep -q '^  ca-certificates-mozilla
-        run: |
-          docker run --rm --privileged \
-            -v "$PWD:/work" \
-            -w /work \
-            archlinux:latest \
-            bash -lc 'pacman -Syu --noconfirm archiso git && bash ./scripts/build-iso.sh'
-
-      - name: Take ownership of build output
-        run: sudo chown -R "$(id -u):$(id -g)" out
-
-      - name: Show ISO metadata
-        run: |
-          ls -lh out/*.iso
-          sha256sum out/*.iso | tee out/SHA256SUMS
-
-      - name: Upload bootable ISO
-        uses: actions/upload-artifact@v4
-        with:
-          name: JoshOS-Stage0-Live-x86_64
-          path: |
-            out/*.iso
-            out/SHA256SUMS
-          if-no-files-found: error
-          compression-level: 0
-          retention-days: 14
- scripts/build-iso.sh
-          grep -q 'NetworkManager.service' scripts/build-iso.sh
-          grep -q 'systemd-timesyncd.service' scripts/build-iso.sh
+          grep -q "networkmanager" scripts/build-iso.sh
+          grep -q "ca-certificates-mozilla" scripts/build-iso.sh
+          grep -q "NetworkManager.service" scripts/build-iso.sh
+          grep -q "systemd-timesyncd.service" scripts/build-iso.sh
 
       - name: Build ISO in Arch Linux
         run: |
