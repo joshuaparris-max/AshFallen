@@ -21,13 +21,15 @@ typedef struct {
     uint64_t base;
 } __attribute__((packed)) idtr_t;
 
-typedef struct {
-    uint64_t rip;
-    uint64_t cs;
-    uint64_t rflags;
-    uint64_t rsp;
-    uint64_t ss;
-} interrupt_frame_t;
+extern const uintptr_t exception_stub_table[32];
+
+_Static_assert(__builtin_offsetof(exception_frame_t, rax) == 0, "exception frame rax offset");
+_Static_assert(__builtin_offsetof(exception_frame_t, r15) == 112, "exception frame r15 offset");
+_Static_assert(__builtin_offsetof(exception_frame_t, vector) == 120, "exception frame vector offset");
+_Static_assert(__builtin_offsetof(exception_frame_t, error_code) == 128, "exception frame error offset");
+_Static_assert(__builtin_offsetof(exception_frame_t, rip) == 136, "exception frame rip offset");
+_Static_assert(__builtin_offsetof(exception_frame_t, rflags) == 152, "exception frame rflags offset");
+_Static_assert(__builtin_offsetof(exception_frame_t, stack_rsp) == 160, "exception frame stack offset");
 
 static idt_entry_t idt[IDT_ENTRIES];
 
@@ -53,104 +55,79 @@ static void idt_set_gate(uint8_t vector, uintptr_t handler, uint16_t selector, u
     entry->reserved = 0;
 }
 
-static __attribute__((noreturn)) void panic_exception(uint64_t vector,
-                                                      uint64_t error_code,
-                                                      const interrupt_frame_t *frame) {
+static void serial_field(const char *name, uint64_t value) {
+    serial_write(name);
+    serial_write("=");
+    serial_write_hex64(value);
+    serial_write("\n");
+}
+
+static int exception_has_saved_stack(const exception_frame_t *frame) {
+    return frame->vector == 8 || (frame->cs & 3u) != 0;
+}
+
+static uint64_t interrupted_rsp(const exception_frame_t *frame) {
+    if (exception_has_saved_stack(frame)) {
+        return frame->stack_rsp;
+    }
+
+    /*
+     * Without a CPU stack switch, the address where old RSP would have been
+     * pushed is exactly the interrupted RSP: immediately above RFLAGS.
+     */
+    return (uint64_t)(uintptr_t)&frame->stack_rsp;
+}
+
+__attribute__((noreturn)) void exception_dispatch(exception_frame_t *frame) {
     __asm__ volatile ("cli");
 
     serial_write("JOSHOS_PANIC_EXCEPTION\n");
-    serial_write("VECTOR=");
-    serial_write_hex64(vector);
-    serial_write("\nERROR=");
-    serial_write_hex64(error_code);
-    serial_write("\nRIP=");
-    serial_write_hex64(frame ? frame->rip : 0);
-    serial_write("\nCS=");
-    serial_write_hex64(frame ? frame->cs : 0);
-    serial_write("\nRFLAGS=");
-    serial_write_hex64(frame ? frame->rflags : 0);
+    serial_field("VECTOR", frame->vector);
+    serial_field("ERROR", frame->error_code);
+    serial_field("RIP", frame->rip);
+    serial_field("CS", frame->cs);
+    serial_field("RFLAGS", frame->rflags);
 
-    if (vector == 14) {
+    serial_write("JOSHOS_REGISTER_DUMP\n");
+    serial_field("RAX", frame->rax);
+    serial_field("RBX", frame->rbx);
+    serial_field("RCX", frame->rcx);
+    serial_field("RDX", frame->rdx);
+    serial_field("RSI", frame->rsi);
+    serial_field("RDI", frame->rdi);
+    serial_field("RBP", frame->rbp);
+    serial_field("RSP", interrupted_rsp(frame));
+    serial_field("R8", frame->r8);
+    serial_field("R9", frame->r9);
+    serial_field("R10", frame->r10);
+    serial_field("R11", frame->r11);
+    serial_field("R12", frame->r12);
+    serial_field("R13", frame->r13);
+    serial_field("R14", frame->r14);
+    serial_field("R15", frame->r15);
+
+    if (exception_has_saved_stack(frame)) {
+        serial_field("SS", frame->stack_ss);
+    }
+
+    if (frame->vector == 14) {
         uint64_t cr2;
         __asm__ volatile ("mov %%cr2, %0" : "=r"(cr2));
-        serial_write("\nCR2=");
-        serial_write_hex64(cr2);
+        serial_field("CR2", cr2);
     }
 
-    serial_write("\nJOSHOS_PANIC_HALT\n");
+    serial_write("JOSHOS_PANIC_HALT\n");
     halt_forever();
 }
-
-#define EXCEPTION_NO_ERROR(name, vector) \
-    __attribute__((interrupt)) static void name(interrupt_frame_t *frame) { \
-        panic_exception((vector), 0, frame); \
-    }
-
-#define EXCEPTION_WITH_ERROR(name, vector) \
-    __attribute__((interrupt)) static void name(interrupt_frame_t *frame, uint64_t error_code) { \
-        panic_exception((vector), error_code, frame); \
-    }
-
-EXCEPTION_NO_ERROR(exception_0, 0)
-EXCEPTION_NO_ERROR(exception_1, 1)
-EXCEPTION_NO_ERROR(exception_2, 2)
-EXCEPTION_NO_ERROR(exception_3, 3)
-EXCEPTION_NO_ERROR(exception_4, 4)
-EXCEPTION_NO_ERROR(exception_5, 5)
-EXCEPTION_NO_ERROR(exception_6, 6)
-EXCEPTION_NO_ERROR(exception_7, 7)
-EXCEPTION_WITH_ERROR(exception_8, 8)
-EXCEPTION_NO_ERROR(exception_9, 9)
-EXCEPTION_WITH_ERROR(exception_10, 10)
-EXCEPTION_WITH_ERROR(exception_11, 11)
-EXCEPTION_WITH_ERROR(exception_12, 12)
-EXCEPTION_WITH_ERROR(exception_13, 13)
-EXCEPTION_WITH_ERROR(exception_14, 14)
-EXCEPTION_NO_ERROR(exception_15, 15)
-EXCEPTION_NO_ERROR(exception_16, 16)
-EXCEPTION_WITH_ERROR(exception_17, 17)
-EXCEPTION_NO_ERROR(exception_18, 18)
-EXCEPTION_NO_ERROR(exception_19, 19)
-EXCEPTION_NO_ERROR(exception_20, 20)
-EXCEPTION_WITH_ERROR(exception_21, 21)
-EXCEPTION_NO_ERROR(exception_22, 22)
-EXCEPTION_NO_ERROR(exception_23, 23)
-EXCEPTION_NO_ERROR(exception_24, 24)
-EXCEPTION_NO_ERROR(exception_25, 25)
-EXCEPTION_NO_ERROR(exception_26, 26)
-EXCEPTION_NO_ERROR(exception_27, 27)
-EXCEPTION_NO_ERROR(exception_28, 28)
-EXCEPTION_WITH_ERROR(exception_29, 29)
-EXCEPTION_WITH_ERROR(exception_30, 30)
-EXCEPTION_NO_ERROR(exception_31, 31)
 
 void interrupts_init(void) {
     /* Hardware IRQs stay disabled until the interrupt-controller milestone. */
     __asm__ volatile ("cli" ::: "memory");
 
-    static const uintptr_t exception_handlers[32] = {
-        (uintptr_t)exception_0,  (uintptr_t)exception_1,
-        (uintptr_t)exception_2,  (uintptr_t)exception_3,
-        (uintptr_t)exception_4,  (uintptr_t)exception_5,
-        (uintptr_t)exception_6,  (uintptr_t)exception_7,
-        (uintptr_t)exception_8,  (uintptr_t)exception_9,
-        (uintptr_t)exception_10, (uintptr_t)exception_11,
-        (uintptr_t)exception_12, (uintptr_t)exception_13,
-        (uintptr_t)exception_14, (uintptr_t)exception_15,
-        (uintptr_t)exception_16, (uintptr_t)exception_17,
-        (uintptr_t)exception_18, (uintptr_t)exception_19,
-        (uintptr_t)exception_20, (uintptr_t)exception_21,
-        (uintptr_t)exception_22, (uintptr_t)exception_23,
-        (uintptr_t)exception_24, (uintptr_t)exception_25,
-        (uintptr_t)exception_26, (uintptr_t)exception_27,
-        (uintptr_t)exception_28, (uintptr_t)exception_29,
-        (uintptr_t)exception_30, (uintptr_t)exception_31
-    };
-
     uint16_t selector = current_code_selector();
     for (uint8_t vector = 0; vector < 32; ++vector) {
         uint8_t ist = vector == 8 ? GDT_DOUBLE_FAULT_IST_INDEX : 0;
-        idt_set_gate(vector, exception_handlers[vector], selector, ist);
+        idt_set_gate(vector, exception_stub_table[vector], selector, ist);
     }
 
     idtr_t idtr = {
