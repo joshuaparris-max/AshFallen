@@ -67,6 +67,46 @@ if (( ! profile_ready )); then
 fi
 emit "JOSHOS_BROWSER_PROFILE_READY"
 
+# Prove the Secret Service itself persists across JOSH-DATA reboots without
+# reading or exporting any real browser credential. The canary is non-secret.
+if [[ -e /run/josh-os-persistence-active ]]; then
+  secret_marker="/home/josh/.local/share/keyrings/.josh-libsecret-probe"
+  secret_value="josh-os-libsecret-canary-v1"
+  secret_log="/tmp/josh-os-secret-tool.log"
+  secret_cmd=(runuser -u josh -- env
+    HOME=/home/josh
+    XDG_RUNTIME_DIR=/run/user/1000
+    DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus
+    secret-tool)
+
+  if [[ -f "$secret_marker" ]]; then
+    recovered="$("${secret_cmd[@]}" lookup application josh-os purpose browser-persistence 2>"$secret_log" || true)"
+    if [[ "$recovered" != "$secret_value" ]]; then
+      emit "JOSHOS_SECRET_STORE_FAIL"
+      emit_log "JOSHOS_SECRET_STORE_DIAG" "$secret_log"
+      exit 1
+    fi
+    emit "JOSHOS_SECRET_STORE_OK"
+  else
+    if ! printf '%s' "$secret_value" | "${secret_cmd[@]}" store \
+        --label="Josh OS browser persistence probe" \
+        application josh-os purpose browser-persistence 2>"$secret_log"; then
+      emit "JOSHOS_SECRET_STORE_FAIL"
+      emit_log "JOSHOS_SECRET_STORE_DIAG" "$secret_log"
+      exit 1
+    fi
+    recovered="$("${secret_cmd[@]}" lookup application josh-os purpose browser-persistence 2>>"$secret_log" || true)"
+    if [[ "$recovered" != "$secret_value" ]]; then
+      emit "JOSHOS_SECRET_STORE_FAIL"
+      emit_log "JOSHOS_SECRET_STORE_DIAG" "$secret_log"
+      exit 1
+    fi
+    install -o josh -g josh -m 0600 /dev/null "$secret_marker"
+    sync
+    emit "JOSHOS_SECRET_STORE_PRIMED"
+  fi
+fi
+
 if /usr/local/lib/josh-os/browser-media-probe >/tmp/josh-os-browser-media-probe.log 2>&1; then
   emit "JOSHOS_BROWSER_MEDIA_OK"
 else

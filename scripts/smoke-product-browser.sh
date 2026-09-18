@@ -16,6 +16,7 @@ mkfs.ext4 -F -L JOSH-DATA "$data_image" >/dev/null
 run_boot() {
   local pass="$1"
   local persistence_marker="$2"
+  local secret_marker="$3"
   local log="browser-boot-${pass}.log"
   rm -f "$log"
 
@@ -35,6 +36,7 @@ run_boot() {
        grep -q 'JOSHOS_BROWSER_PROFILE_READY' "$log" 2>/dev/null &&
        grep -q 'JOSHOS_BROWSER_MEDIA_OK' "$log" 2>/dev/null &&
        grep -q 'JOSHOS_NETWORK_READY' "$log" 2>/dev/null &&
+       grep -q "$secret_marker" "$log" 2>/dev/null &&
        grep -q "$persistence_marker" "$log" 2>/dev/null; then
       cleanup
       trap - RETURN
@@ -55,7 +57,7 @@ run_boot() {
   return 1
 }
 
-run_boot 1 JOSHOS_BROWSER_PERSISTENCE_PRIMED
-run_boot 2 JOSHOS_BROWSER_PERSISTENCE_OK
+run_boot 1 JOSHOS_BROWSER_PERSISTENCE_PRIMED JOSHOS_SECRET_STORE_PRIMED
+run_boot 2 JOSHOS_BROWSER_PERSISTENCE_OK JOSHOS_SECRET_STORE_OK
 
 echo "Josh OS product browser + internet two-boot persistence smoke test passed."

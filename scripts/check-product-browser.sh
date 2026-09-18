@@ -65,6 +65,8 @@ grep -q '"RestoreOnStartup": 1' "$policy"
 grep -q '"PasswordManagerEnabled": false' "$policy"
 grep -q 'pipewire-pulse.service' "$session"
 grep -q 'gnome-keyring-daemon' "$session"
+grep -q 'JOSHOS_SECRET_STORE_OK' "$root/usr/local/lib/josh-os/browser-ready-probe"
+grep -q 'secret-tool' "$root/usr/local/lib/josh-os/browser-ready-probe"
 grep -q 'josh-os-browser chrome://newtab' "$session"
 
 [[ -L "$root/etc/systemd/system/multi-user.target.wants/josh-os-persistence.service" ]]
