@@ -1,0 +1,78 @@
+name: Build Josh Wayland Compositor
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-compositor.yml'
+      - 'compositor/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: josh-compositor-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  host-window-model:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Test compositor-owned window semantics
+        run: make -C compositor test
+
+  wlroots-build-and-headless-smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Build and exercise compositor on current Arch wlroots
+        run: |
+          docker run --rm \
+            -v "$PWD:/work" \
+            -w /work \
+            archlinux:latest \
+            bash -lc '
+              set -euo pipefail
+              pacman -Syu --noconfirm --needed \
+                base-devel \
+                pkgconf \
+                wayland \
+                wayland-protocols \
+                wayland-utils \
+                wlroots0.20 \
+                xkbcommon
+
+              make -C compositor clean test compositor
+
+              export XDG_RUNTIME_DIR=/tmp/josh-runtime
+              install -d -m 0700 "$XDG_RUNTIME_DIR"
+
+              set +e
+              timeout 8s env \
+                WLR_BACKENDS=headless \
+                WLR_HEADLESS_OUTPUTS=1 \
+                WLR_RENDERER=pixman \
+                ./compositor/josh-compositor \
+                  -s "wayland-info; echo JOSH_WAYLAND_INFO_OK" \
+                > compositor-headless.log 2>&1
+              rc=$?
+              set -e
+
+              if [[ $rc -ne 124 ]]; then
+                cat compositor-headless.log
+                echo "Unexpected compositor exit code: $rc" >&2
+                exit 1
+              fi
+
+              cat compositor-headless.log
+              grep -q "JOSH_COMPOSITOR_READY" compositor-headless.log
+              grep -q "JOSH_COMPOSITOR_OUTPUT" compositor-headless.log
+              grep -q "JOSH_WAYLAND_INFO_OK" compositor-headless.log
+              grep -q "interface: .xdg_wm_base." compositor-headless.log
+
+              echo "Josh compositor headless Wayland protocol smoke test passed."
+            '
