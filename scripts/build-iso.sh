@@ -102,6 +102,13 @@ PROFILE
 mkdir -p "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants"
 ln -sfn /usr/lib/systemd/system/graphical.target "$GENERATED_PROFILE/airootfs/etc/systemd/system/default.target"
 ln -sfn /usr/lib/systemd/system/lightdm.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/display-manager.service"
+
+# ArchISO releng may enable systemd-networkd/iwd. Josh OS Stage 0 uses one
+# network owner: NetworkManager (with wpa_supplicant for Wi-Fi).
+rm -f \
+  "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/systemd-networkd.service" \
+  "$GENERATED_PROFILE/airootfs/etc/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service" \
+  "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/iwd.service"
 ln -sfn /usr/lib/systemd/system/vboxservice.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/vboxservice.service"
 ln -sfn /usr/lib/systemd/system/NetworkManager.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/NetworkManager.service"
 ln -sfn /usr/lib/systemd/system/systemd-resolved.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/systemd-resolved.service"
