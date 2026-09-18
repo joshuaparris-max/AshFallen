@@ -269,21 +269,37 @@ Do not expose kernel internals as the permanent Josh app API.
 
 ## K14 — Networking
 
-Incremental path:
+The first native networking slice is deliberately driver-independent and host-testable.
 
-- [ ] network device abstraction;
-- [ ] loopback;
+- [x] network device abstraction;
+- [x] loopback device + live kernel self-test;
 - [ ] first QEMU NIC driver;
-- [ ] Ethernet;
-- [ ] ARP;
-- [ ] IPv4;
-- [ ] ICMP;
-- [ ] UDP;
-- [ ] DHCP;
-- [ ] DNS;
-- [ ] TCP;
+- [x] Ethernet frame encode/decode primitives;
+- [x] ARP packet encode/decode primitives;
+- [x] IPv4 packet encode/decode + header checksum primitives;
+- [x] ICMP echo validation/reply primitive;
+- [x] UDP datagram encode/decode + IPv4 pseudo-header checksum primitive;
+- [x] DHCP OFFER/ACK reply parser;
+- [x] DNS A-query builder + A-response parser;
+- [x] TCP segment parser + IPv4 checksum primitive;
+- [ ] ARP cache and neighbour state;
+- [ ] IPv4 interface/routing state;
+- [ ] live ICMP over a NIC;
+- [ ] live UDP endpoints;
+- [ ] DHCP client state machine, timers and lease renewal;
+- [ ] DNS resolver transport/cache;
+- [ ] TCP connection state machine, retransmission, flow control and timers;
 - [ ] sockets or deliberately chosen Josh networking API;
 - [ ] later IPv6.
+
+The checked protocol items above are **wire-format primitives**, not a complete TCP/IP stack. Host tests exercise valid, truncated, malformed and checksum paths, and kernel CI requires the network-device loopback self-test marker. A real e1000/virtio-net path remains dependent on PCI/device discovery, MMIO/DMA, interrupts and stable timeouts/timers.
+
+Verified native-network runs on 18 Sep 2026 include:
+
+- `35396861756` — freestanding packet code builds and the existing kernel boot remains green;
+- `35396967862` — network-device and packet host tests green;
+- `35396982548` — live kernel loopback self-test green;
+- `35397002256` — normal boot smoke explicitly requires `JOSHOS_NET_LOOPBACK_OK`.
 
 Networking must include packet validation and hostile-input testing from the start.
 
