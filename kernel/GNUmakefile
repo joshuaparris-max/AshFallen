@@ -46,7 +46,6 @@ LDFLAGS := \
 	-Wl,--gc-sections \
 	-Wl,-T,linker-scripts/x86_64.lds \
 	-Wl,--build-id=none \
-	-no-pie
 
 SRC := $(shell find src -type f -name '*.c' | LC_ALL=C sort)
 OBJ := $(patsubst %.c,obj/%.o,$(SRC))
