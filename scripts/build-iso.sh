@@ -50,7 +50,6 @@ packages=(
   noto-fonts
   openbox
   ttf-dejavu
-  virtualbox-guest-utils
   xorg-server
   xorg-xrandr
   xorg-xset
