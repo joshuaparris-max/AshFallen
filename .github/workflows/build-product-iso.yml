@@ -47,6 +47,9 @@ jobs:
             archlinux:latest \
             bash -lc 'pacman -Syu --noconfirm archiso git && bash ./scripts/build-iso.sh'
 
+      - name: Take ownership of build output
+        run: sudo chown -R "$(id -u):$(id -g)" out
+
       - name: Product browser two-boot smoke test
         run: |
           sudo apt-get update
@@ -55,9 +58,6 @@ jobs:
           bash scripts/smoke-product-browser.sh "$iso" out/browser-persistence-test.img
           mv browser-boot-1.log out/browser-boot-1.log
           mv browser-boot-2.log out/browser-boot-2.log
-
-      - name: Take ownership of build output
-        run: sudo chown -R "$(id -u):$(id -g)" out
 
       - name: Show ISO metadata
         run: |
