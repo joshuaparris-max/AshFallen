@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+label="JOSH-DATA"
+mountpoint_path="/home/josh"
+
+udevadm settle --timeout=5 >/dev/null 2>&1 || true
+
+device="$(blkid -L "$label" 2>/dev/null || true)"
+if [[ -z "$device" ]]; then
+  echo "Josh OS persistence: no $label volume; using disposable live home"
+  exit 0
+fi
+
+fstype="$(blkid -s TYPE -o value "$device" 2>/dev/null || true)"
+if [[ "$fstype" != "ext4" ]]; then
+  echo "Josh OS persistence: $label must be ext4 (found: ${fstype:-unknown})" >&2
+  exit 1
+fi
+
+if mountpoint -q "$mountpoint_path"; then
+  current="$(findmnt -n -o SOURCE --target "$mountpoint_path" 2>/dev/null || true)"
+  if [[ "$current" == "$device" ]]; then
+    exit 0
+  fi
+  echo "Josh OS persistence: $mountpoint_path is already a different mount ($current)" >&2
+  exit 1
+fi
+
+mount -o rw,nosuid,nodev "$device" "$mountpoint_path"
+chown josh:josh "$mountpoint_path"
+chmod 0750 "$mountpoint_path"
+install -d -o josh -g josh -m 0755   "$mountpoint_path/.config"   "$mountpoint_path/.local"   "$mountpoint_path/.local/share"   "$mountpoint_path/Downloads"
+
+touch /run/josh-os-persistence-active
+echo "Josh OS persistence: mounted $device at $mountpoint_path"

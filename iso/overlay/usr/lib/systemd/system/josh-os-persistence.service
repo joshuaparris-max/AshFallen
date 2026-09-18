@@ -1,0 +1,12 @@
+[Unit]
+Description=Josh OS persistent live-user home
+After=local-fs.target systemd-udevd.service
+Before=display-manager.service
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/lib/josh-os/prepare-persistent-home
+RemainAfterExit=yes
+
+[Install]
+WantedBy=multi-user.target

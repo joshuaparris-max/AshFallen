@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if [[ "$(id -u)" -eq 0 ]]; then
+  echo "josh-os-browser: refusing to run Chromium as root" >&2
+  exit 1
+fi
+
+profile="${JOSH_BROWSER_PROFILE:-$HOME/.config/chromium-josh-browser}"
+downloads="${JOSH_BROWSER_DOWNLOADS:-$HOME/Downloads}"
+
+mkdir -p "$profile" "$downloads"
+chmod 700 "$profile"
+
+# Do not add --no-sandbox: Chromium keeps its normal Linux sandbox.
+# Do not add --disable-gpu: compositing/GPU acceleration stays available.
+# VA-API feature flags are intentionally not forced because Chromium changes
+# them frequently; the image carries Mesa/libva and common Intel/AMD drivers.
+args=(
+  --user-data-dir="$profile"
+  --password-store=gnome-libsecret
+  --ozone-platform=x11
+  --start-maximized
+  --no-first-run
+  --disable-session-crashed-bubble
+  --restore-last-session
+)
+
+exec /usr/bin/chromium "${args[@]}" "$@"

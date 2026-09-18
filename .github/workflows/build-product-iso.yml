@@ -8,7 +8,7 @@ on:
       - '.github/workflows/build-product-iso.yml'
       - 'design/**'
       - 'iso/**'
-      - 'scripts/build-iso.sh'
+      - 'scripts/**'
       - 'shell/**'
 
 permissions:
@@ -21,15 +21,16 @@ jobs:
     steps:
       - uses: actions/checkout@v5
 
-      - name: Validate internet platform scripts
+      - name: Validate product scripts
         run: |
           bash -n scripts/build-iso.sh
+          bash -n scripts/check-product-browser.sh
+          bash -n iso/overlay/usr/local/bin/josh-os-session
+          bash -n iso/overlay/usr/local/bin/josh-os-browser
+          bash -n iso/overlay/usr/local/bin/josh-os-browser-diagnostics
           bash -n iso/overlay/usr/local/bin/josh-network-check
           bash -n iso/overlay/usr/local/bin/josh-wifi
-          grep -q "networkmanager" scripts/build-iso.sh
-          grep -q "ca-certificates-mozilla" scripts/build-iso.sh
-          grep -q "NetworkManager.service" scripts/build-iso.sh
-          grep -q "systemd-timesyncd.service" scripts/build-iso.sh
+          bash -n iso/overlay/usr/local/lib/josh-os/prepare-persistent-home
 
       - name: Build ISO in Arch Linux
         run: |

@@ -1,0 +1,68 @@
+#!/usr/bin/env bash
+set -u
+
+failures=0
+check() {
+  local label="$1"
+  shift
+  if "$@" >/dev/null 2>&1; then
+    printf 'OK   %s\n' "$label"
+  else
+    printf 'FAIL %s\n' "$label"
+    failures=$((failures + 1))
+  fi
+}
+
+echo "Josh OS browser diagnostics"
+echo "==========================="
+chromium --version 2>/dev/null || true
+printf 'User: %s (uid %s)\n' "$(id -un)" "$(id -u)"
+
+if [[ "$(id -u)" -eq 0 ]]; then
+  echo "FAIL Chromium session is running as root"
+  failures=$((failures + 1))
+else
+  echo "OK   non-root Chromium session"
+fi
+
+if grep -Eq -- '^[[:space:]]*--no-sandbox([[:space:]]|$)' /usr/local/bin/josh-os-browser; then
+  echo "FAIL browser launcher disables sandbox"
+  failures=$((failures + 1))
+else
+  echo "OK   browser launcher keeps Chromium sandbox"
+fi
+
+if grep -Eq -- '^[[:space:]]*--disable-gpu([[:space:]]|$)' /usr/local/bin/josh-os-browser; then
+  echo "FAIL browser launcher disables GPU"
+  failures=$((failures + 1))
+else
+  echo "OK   browser launcher leaves GPU enabled"
+fi
+
+check "Chromium profile writable" test -w "$HOME/.config/chromium-josh-browser"
+check "Downloads writable" test -w "$HOME/Downloads"
+check "PipeWire/Pulse server" pactl info
+check "GNOME Secret Service daemon" pgrep -x gnome-keyring-daemon
+
+if [[ -r /etc/ssl/certs/ca-certificates.crt || -r /etc/ca-certificates/extracted/tls-ca-bundle.pem ]]; then
+  echo "OK   system CA certificate bundle"
+else
+  echo "FAIL system CA certificate bundle"
+  failures=$((failures + 1))
+fi
+
+if [[ -e /run/josh-os-persistence-active ]]; then
+  echo "OK   persistent JOSH-DATA home active"
+else
+  echo "INFO persistent JOSH-DATA home not mounted; live-session state is disposable"
+fi
+
+if command -v vainfo >/dev/null 2>&1; then
+  if vainfo >/tmp/josh-os-vainfo.log 2>&1; then
+    echo "OK   VA-API responds"
+  else
+    echo "INFO VA-API unavailable on this GPU/session; software video decode remains possible"
+  fi
+fi
+
+exit "$failures"

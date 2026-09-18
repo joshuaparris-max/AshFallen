@@ -43,27 +43,40 @@ mkdir -p "$(dirname "$GENERATED_PROFILE")"
 cp -a "$ARCHISO_PROFILE" "$GENERATED_PROFILE"
 
 packages=(
+  alsa-utils
   ca-certificates
   ca-certificates-mozilla
   chromium
   curl
+  gnome-keyring
+  intel-media-driver
   iproute2
   iw
-  linux-firmware
-  networkmanager
-  openssl
+  libsecret
+  libva-intel-driver
+  libva-utils
   lightdm
   lightdm-gtk-greeter
+  linux-firmware
   mesa
+  networkmanager
   noto-fonts
   openbox
+  openssl
+  pipewire
+  pipewire-alsa
+  pipewire-audio
+  pipewire-pulse
   ttf-dejavu
+  vulkan-intel
+  vulkan-radeon
+  wireplumber
+  wireless-regdb
+  wpa_supplicant
   xorg-server
   xorg-xrandr
   xorg-xset
   xorg-xsetroot
-  wireless-regdb
-  wpa_supplicant
 )
 
 for package in "${packages[@]}"; do
@@ -94,30 +107,29 @@ iso_name="josh-os"
 iso_publisher="Josh OS <https://github.com/joshuaparris-max/AshFallen>"
 iso_application="Josh OS Stage 0 Live"
 file_permissions["/usr/local/bin/josh-os-session"]="0:0:0755"
+file_permissions["/usr/local/bin/josh-os-browser"]="0:0:0755"
+file_permissions["/usr/local/bin/josh-os-browser-diagnostics"]="0:0:0755"
 file_permissions["/usr/local/bin/josh-network-check"]="0:0:0755"
 file_permissions["/usr/local/bin/josh-wifi"]="0:0:0755"
+file_permissions["/usr/local/lib/josh-os/prepare-persistent-home"]="0:0:0755"
 file_permissions["/etc/sudoers.d/10-josh-os-live"]="0:0:0440"
 PROFILE
 
 mkdir -p "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants"
 ln -sfn /usr/lib/systemd/system/graphical.target "$GENERATED_PROFILE/airootfs/etc/systemd/system/default.target"
 ln -sfn /usr/lib/systemd/system/lightdm.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/display-manager.service"
-
-# ArchISO releng may enable systemd-networkd/iwd. Josh OS Stage 0 uses one
-# network owner: NetworkManager (with wpa_supplicant for Wi-Fi).
-rm -f \
-  "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/systemd-networkd.service" \
-  "$GENERATED_PROFILE/airootfs/etc/systemd/system/network-online.target.wants/systemd-networkd-wait-online.service" \
-  "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/iwd.service"
-ln -sfn /usr/lib/systemd/system/vboxservice.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/vboxservice.service"
+ln -sfn /usr/lib/systemd/system/josh-os-persistence.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/josh-os-persistence.service"
 ln -sfn /usr/lib/systemd/system/NetworkManager.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/NetworkManager.service"
 ln -sfn /usr/lib/systemd/system/systemd-resolved.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/systemd-resolved.service"
 ln -sfn /usr/lib/systemd/system/systemd-timesyncd.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/systemd-timesyncd.service"
+ln -sfn /usr/lib/systemd/system/vboxservice.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/vboxservice.service"
 ln -sfn /run/systemd/resolve/stub-resolv.conf "$GENERATED_PROFILE/airootfs/etc/resolv.conf"
 
 while IFS= read -r -d '' cfg; do
   sed -i     -e 's/Arch Linux install medium/Josh OS live/g'     -e 's/Arch Linux/Josh OS/g'     "$cfg"
 done < <(find "$GENERATED_PROFILE" -type f \( -name '*.cfg' -o -name '*.conf' \) -print0)
+
+bash "$ROOT/scripts/check-product-browser.sh" "$GENERATED_PROFILE"
 
 if [[ "$PREPARE_ONLY" -eq 1 ]]; then
   echo "Prepared ArchISO profile: $GENERATED_PROFILE"

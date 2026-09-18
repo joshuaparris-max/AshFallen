@@ -1,0 +1,10 @@
+[Desktop Entry]
+Name=Browser
+Comment=Browse the web with Chromium
+Exec=/usr/local/bin/josh-os-browser %U
+Icon=chromium
+Terminal=false
+Type=Application
+Categories=Network;WebBrowser;
+MimeType=text/html;x-scheme-handler/http;x-scheme-handler/https;
+StartupNotify=true

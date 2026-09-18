@@ -1,6 +1,6 @@
 [Desktop Entry]
 Name=Josh OS
 Comment=Josh OS Stage 0 live desktop
-Exec=/usr/local/bin/josh-os-session
+Exec=/usr/bin/dbus-run-session -- /usr/local/bin/josh-os-session
 Type=Application
 DesktopNames=JoshOS

@@ -1,9 +1,30 @@
 #!/usr/bin/env bash
 set -u
 
+export XDG_CURRENT_DESKTOP=JoshOS
+export XDG_SESSION_DESKTOP=JoshOS
+
 xset s off 2>/dev/null || true
 xset -dpms 2>/dev/null || true
 xsetroot -solid '#08131c' 2>/dev/null || true
+
+systemctl --user start pipewire.service pipewire-pulse.service wireplumber.service   >/tmp/josh-os-audio.log 2>&1 || true
+
+# Stage 0 is a passwordless autologin live session. Initialise/unlock a blank
+# login keyring so Chromium's libsecret safe-storage key remains stable when
+# /home/josh is backed by JOSH-DATA. This is functional persistence, not
+# encrypted-at-rest credential storage; installed Josh OS must use PAM unlock.
+if command -v gnome-keyring-daemon >/dev/null 2>&1; then
+  unlock_env="$(printf '\n' | gnome-keyring-daemon --unlock 2>/tmp/josh-os-keyring-unlock.log || true)"
+  if [[ -n "$unlock_env" ]]; then
+    eval "$unlock_env"
+  fi
+  start_env="$(gnome-keyring-daemon --start --components=secrets 2>/tmp/josh-os-keyring.log || true)"
+  if [[ -n "$start_env" ]]; then
+    eval "$start_env"
+  fi
+  export GNOME_KEYRING_CONTROL
+fi
 
 VBoxClient --vmsvga >/tmp/josh-os-vbox-vmsvga.log 2>&1 &
 VBoxClient --clipboard >/tmp/josh-os-vbox-clipboard.log 2>&1 &
@@ -11,9 +32,27 @@ VBoxClient --clipboard >/tmp/josh-os-vbox-clipboard.log 2>&1 &
 openbox >/tmp/josh-os-openbox.log 2>&1 &
 sleep 0.5
 
-url='file:///opt/josh-os/shell/index.html'
+run_shell() {
+  local url='file:///opt/josh-os/shell/index.html'
+  while true; do
+    chromium       --kiosk       --ozone-platform=x11       --no-first-run       --disable-session-crashed-bubble       --password-store=basic       --user-data-dir="$HOME/.config/chromium-josh-shell"       "$url" >/tmp/josh-os-shell.log 2>&1
+    sleep 1
+  done
+}
+run_shell &
+shell_pid=$!
 
+xdg-settings set default-web-browser josh-os-browser.desktop >/tmp/josh-os-default-browser.log 2>&1 || true
+
+# Boot directly into the real browser. Crash exits are relaunched with the same
+# profile; a clean user close falls back to the Josh shell underneath.
 while true; do
-  chromium     --kiosk     --ozone-platform=x11     --disable-gpu     --no-first-run     --disable-session-crashed-bubble     --disable-infobars     --disable-translate     --password-store=basic     --user-data-dir=/home/josh/.config/chromium-josh-os     "$url" >/tmp/josh-os-chromium.log 2>&1
+  /usr/local/bin/josh-os-browser chrome://newtab >/tmp/josh-os-browser.log 2>&1
+  status=$?
+  if [[ $status -eq 0 ]]; then
+    break
+  fi
   sleep 1
 done
+
+wait "$shell_pid"
