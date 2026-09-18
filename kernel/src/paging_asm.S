@@ -1,5 +1,5 @@
-.section .bss
-.align 16
+.section .paging_stack,"aw",@nobits
+.align 4096
 paging_transition_stack:
     .skip 32768
 paging_transition_stack_top:
