@@ -4,6 +4,7 @@
 #include "desktop.h"
 #include "gdt.h"
 #include "gfx.h"
+#include "heap.h"
 #include "interrupts.h"
 #include "keyboard.h"
 #include "pmm.h"
@@ -30,6 +31,21 @@ static __attribute__((noreturn)) void kernel_after_paging(void) {
         halt_forever();
     }
     serial_write("JOSHOS_PAGING_PERMISSIONS_OK\n");
+
+    heap_status_t heap_status = heap_kernel_init(&boot_context);
+    if (heap_status != HEAP_OK) {
+        serial_write("JOSHOS_ERROR_HEAP_INIT\n");
+        serial_write(heap_status_string(heap_status));
+        serial_write("\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_HEAP_OK\n");
+
+    if (!heap_self_test()) {
+        serial_write("JOSHOS_ERROR_HEAP_SELF_TEST\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_HEAP_SELF_TEST_OK\n");
 
     gfx_init(&boot_context.framebuffer);
     desktop_layout_t layout = desktop_draw();
