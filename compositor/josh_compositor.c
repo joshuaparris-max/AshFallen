@@ -326,8 +326,8 @@ static bool begin_interactive(
     }
 
     if (view->state.maximised && mode == JOSH_CURSOR_MOVE) {
-        josh_window_toggle_maximise(
-            &view->state, &server_desktop_bounds(server));
+        struct josh_rect desktop = server_desktop_bounds(server);
+        josh_window_toggle_maximise(&view->state, &desktop);
         wlr_xdg_toplevel_set_maximized(view->toplevel, false);
         view_apply_geometry(view);
     }
