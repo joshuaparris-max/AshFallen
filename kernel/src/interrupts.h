@@ -36,8 +36,23 @@ typedef struct {
     uint64_t stack_ss;
 } exception_frame_t;
 
+typedef void (*interrupt_handler_t)(uint8_t vector, void *context);
+
 void interrupts_init(void);
+int interrupts_register_handler(
+    uint8_t vector,
+    interrupt_handler_t handler,
+    void *context
+);
+void interrupts_enable(void);
+void interrupts_disable(void);
+uint64_t interrupts_save_disable(void);
+void interrupts_restore(uint64_t flags);
+int interrupts_are_enabled(void);
+uint64_t interrupts_unhandled_count(void);
+
 __attribute__((noreturn)) void exception_dispatch(exception_frame_t *frame);
+void interrupt_dispatch(uint64_t vector);
 
 #ifdef JOSHOS_FAULT_TEST_DOUBLE_FAULT
 void interrupts_arm_double_fault_test(void);
