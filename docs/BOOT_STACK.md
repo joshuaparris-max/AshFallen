@@ -45,6 +45,12 @@ the same Josh kernel
 
 The goal is **not** to fork the kernel for each bootloader. Boot protocols are adapters into one kernel contract.
 
+## Current JoshBootloader UEFI status
+
+On 18 September 2026, the JoshBIOS repository gained a tested x86-64 UEFI entry scaffold. Its `BOOTX64.EFI` is built into a FAT removable-media image and exercised under QEMU/OVMF; the smoke test requires the `JOSHUEFI_ENTRY_OK` serial marker.
+
+AshFallen itself is unchanged at the boot boundary: **Limine remains the only integrated native-kernel boot path**. The JoshBIOS UEFI scaffold does not yet load this kernel, construct the full Josh Boot Protocol or call a Josh-specific kernel entry adapter.
+
 ## From the power button to the desktop
 
 A mature path needs all of these layers:
