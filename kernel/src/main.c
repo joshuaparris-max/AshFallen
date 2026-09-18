@@ -80,7 +80,7 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
 #ifdef JOSHOS_FAULT_TEST_PAGE
     serial_write("JOSHOS_FAULT_TEST_PAGE\n");
     __asm__ volatile (
-        "movabs $0x0000004000000000, %%rax\n\t"
+        "movabs $0x00007ffffffff000, %%rax\n\t"
         "movq $0x1, (%%rax)"
         :
         :
