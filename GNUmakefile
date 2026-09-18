@@ -7,11 +7,13 @@ DOUBLE_FAULT_IMAGE := JoshOS-double-fault-test-x86_64
 DIVIDE_FAULT_IMAGE := JoshOS-divide-fault-test-x86_64
 PAGE_FAULT_IMAGE := JoshOS-page-fault-test-x86_64
 GP_FAULT_IMAGE := JoshOS-gp-fault-test-x86_64
+STORAGE_TEST_IMAGE := JoshOS-storage-test-x86_64
+STORAGE_TEST_DISK := storage-test.img
 LIMINE_VERSION := 12.9.0
 LIMINE_SHA256 := 84059c93b4ea03994af6d614654c7095291388850ea7b258d64f9263abde5557
 LIMINE_URL := https://github.com/Limine-Bootloader/Limine/releases/download/v$(LIMINE_VERSION)/limine-binary.tar.gz
 
-.PHONY: all kernel host-tests run smoke fault-smoke clean distclean
+.PHONY: all kernel host-tests run smoke storage-smoke fault-smoke clean distclean
 all: $(IMAGE).iso
 
 limine-binary.tar.gz:
@@ -67,8 +69,34 @@ smoke: $(IMAGE).iso
 	grep -q JOSHOS_HEAP_OK boot.log
 	grep -q JOSHOS_HEAP_SELF_TEST_OK boot.log
 	grep -q JOSHOS_NET_LOOPBACK_OK boot.log
+	grep -q JOSHOS_STORAGE_SERVICES_OK boot.log
+	grep -q JOSHOS_PCI_OK boot.log
+	grep -q JOSHOS_STORAGE_RUNTIME_OK boot.log
 	grep -q JOSHOS_BOOT_OK boot.log
 	@echo "Josh OS boot smoke test passed."
+
+storage-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
+	$(MAKE) -C kernel clean
+	python3 kernel/tests/make_storage_image.py $(STORAGE_TEST_DISK)
+	$(MAKE) IMAGE=$(STORAGE_TEST_IMAGE) EXTRA_CPPFLAGS=-DJOSHOS_STORAGE_TEST $(STORAGE_TEST_IMAGE).iso
+	rm -f storage-boot.log
+	-timeout 15s qemu-system-x86_64 -M q35 -m 256M -cdrom $(STORAGE_TEST_IMAGE).iso \
+		-device ich9-ahci,id=storage_ahci \
+		-drive file=$(STORAGE_TEST_DISK),if=none,id=storage_disk,format=raw \
+		-device ide-hd,drive=storage_disk,bus=storage_ahci.0 \
+		-display none -serial stdio -no-reboot > storage-boot.log 2>&1
+	cat storage-boot.log
+	grep -q JOSHOS_PCI_OK storage-boot.log
+	grep -q JOSHOS_AHCI_OK storage-boot.log
+	grep -q JOSHOS_STORAGE_PARTITION_OK storage-boot.log
+	grep -q JOSHOS_STORAGE_READ_OK storage-boot.log
+	grep -q JOSHOS_STORAGE_FLUSH_OK storage-boot.log
+	grep -q JOSHOS_STORAGE_WRITE_OK storage-boot.log
+	grep -q JOSHOS_STORAGE_TEST_OK storage-boot.log
+	grep -q JOSHOS_BOOT_OK storage-boot.log
+	@echo "Josh OS AHCI storage smoke test passed."
+	$(MAKE) -C kernel clean
+	rm -f storage-boot.log $(STORAGE_TEST_IMAGE).iso $(STORAGE_TEST_DISK)
 
 fault-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
 	$(MAKE) -C kernel clean
@@ -138,7 +166,7 @@ fault-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
 
 clean:
 	$(MAKE) -C kernel clean
-	rm -rf iso_root boot.log fault-boot.log divide-fault-boot.log page-fault-boot.log gp-fault-boot.log double-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DIVIDE_FAULT_IMAGE).iso $(PAGE_FAULT_IMAGE).iso $(GP_FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso
+	rm -rf iso_root boot.log storage-boot.log $(STORAGE_TEST_DISK) $(STORAGE_TEST_IMAGE).iso fault-boot.log divide-fault-boot.log page-fault-boot.log gp-fault-boot.log double-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DIVIDE_FAULT_IMAGE).iso $(PAGE_FAULT_IMAGE).iso $(GP_FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso
 
 distclean:
 	$(MAKE) -C kernel distclean
