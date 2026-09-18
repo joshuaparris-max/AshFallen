@@ -1,10 +1,17 @@
 # Josh OS Architecture
 
-## What it is
+## Architectural intent
 
-Josh OS is an independent x86-64 operating-system project. Limine is currently used only as the bootloader: after handoff, the Josh OS kernel owns execution. There is no Linux kernel underneath the current system.
+Josh OS is one system being developed from both ends:
 
-## v0.1 boot path
+- **top-down**, by specifying the desktop, window system, application model and visual language;
+- **bottom-up**, through an independent x86-64 kernel that already boots and renders directly to a framebuffer.
+
+A practical Linux-backed product track will sit between those ends while native kernel capability grows.
+
+See [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md) for the convergence plan and [DESKTOP_PROTOTYPE_COMPARISON.md](DESKTOP_PROTOTYPE_COMPARISON.md) for the lessons taken from the early desktop prototype.
+
+## Native v0.1 boot path
 
     BIOS / UEFI
         ↓
@@ -20,27 +27,115 @@ Josh OS is an independent x86-64 operating-system project. Limine is currently u
         ↓
     PS/2 keyboard polling
 
-## Source modules
+Limine is currently only the bootloader. After handoff, the Josh kernel owns execution. There is no Linux kernel underneath this native path.
 
-- main.c — kernel entry and boot-protocol requests.
-- gfx.c — framebuffer drawing primitives and colour conversion.
-- font.c — deliberately tiny built-in 5×7 bitmap font.
-- desktop.c — visual composition of the v0.1 desktop.
-- shell.c — command state and terminal rendering.
-- keyboard.c — minimal PS/2 Set-1 keyboard input.
-- serial.c — COM1 diagnostics and CI boot marker.
-- memory.c — freestanding memory primitives required by the compiler.
+## Current native source modules
 
-## Current boundaries
+- `main.c` — kernel entry and boot-protocol requests.
+- `gfx.c` — framebuffer drawing primitives and colour conversion.
+- `font.c` — deliberately tiny built-in 5×7 bitmap font.
+- `desktop.c` — visual composition of the v0.1 desktop.
+- `shell.c` — command state and terminal rendering.
+- `keyboard.c` — minimal PS/2 Set-1 keyboard input.
+- `serial.c` — COM1 diagnostics and CI boot marker.
+- `memory.c` — freestanding memory primitives required by the compiler.
 
-The graphical desktop in 0.1 is not yet a compositor. Its window and dock are rendered directly into the boot framebuffer. Keyboard input is polled, not interrupt-driven. There is no process isolation, filesystem, USB stack, networking, audio or GPU acceleration yet.
+## Future production desktop architecture
 
-Those are limitations, not hidden dependencies. Each will become an explicit subsystem as the project grows.
+The first daily-usable Josh OS should initially use mature Linux hardware support while keeping Josh concepts above it:
+
+    Josh apps
+       ↓
+    Josh application API
+       ↓
+    Josh desktop shell
+       ↓
+    Josh compositor/window system
+       ↓
+    Josh system services
+       ↓
+    Linux kernel/drivers
+
+This is a staging architecture, not an abandonment of the Josh kernel.
+
+## Shared conceptual layer
+
+The crucial architectural boundary is a set of Josh OS concepts that can survive implementation changes.
+
+Candidate core models:
+
+### App
+
+Identity, metadata, launch contract, capabilities and preferred presentation.
+
+### Window
+
+Identity, owner app/process, title, geometry, state, focus/stacking state and supported operations.
+
+### Surface
+
+Drawable content owned by a window or system component. Browser DOM, Wayland buffers and future native Josh buffers are implementations, not the concept itself.
+
+### Command
+
+A named user/system action that can be invoked from menus, launchers, keyboard shortcuts or automation.
+
+### Notification
+
+A structured event intended for user attention, independent of how a particular shell renders it.
+
+### Setting
+
+Typed configuration with ownership, scope, default and persistence rules.
+
+### Capability
+
+Explicit authority granted to an application or service rather than incidental access to global system state.
+
+## Design-system architecture
+
+Josh OS should have a shared, implementation-neutral design source rather than independent CSS/C constants.
+
+It should define semantic tokens such as:
+
+- surface/background roles;
+- text roles;
+- accent and status roles;
+- spacing scale;
+- radius scale;
+- typography scale;
+- elevation;
+- animation duration/easing;
+- window constraints;
+- desktop geometry.
+
+Generators/adapters may then produce CSS for prototypes, compositor/native constants and application resources.
+
+## Current native boundaries
+
+The v0.1 graphical desktop is **not** yet a compositor. Its apparent window and dock are rendered directly into the boot framebuffer.
+
+Keyboard input is polled rather than interrupt-driven.
+
+There is currently no:
+
+- process isolation;
+- userspace;
+- filesystem;
+- USB stack;
+- mouse driver;
+- networking;
+- audio;
+- GPU acceleration.
+
+Those are explicit limitations, not hidden dependencies.
 
 ## Architectural principles
 
-1. **Concepts should map to reality.** A module exists because the system has that concept, not because a framework convention demanded another layer.
-2. **Dependencies point inward.** Hardware details stay near hardware-facing modules; UI code should not manipulate I/O ports.
-3. **Boot remains observable.** Serial diagnostics should make failures understandable before a GUI is available.
-4. **The system remains bootable.** Major work should land as vertical slices that still produce a runnable ISO.
-5. **Beauty follows coherence.** Visual polish matters, but the source and runtime model should tell the same story.
+1. **Concepts map to reality.** A module exists because the system has that concept, not because a framework convention demanded a layer.
+2. **Separate concepts from adapters.** Window is a Josh concept; DOM, Wayland and native framebuffer/compositor implementations are adapters.
+3. **Dependencies point inward.** Hardware details stay near hardware-facing modules. Application code should not know about I/O ports or Linux-specific plumbing.
+4. **Boot remains observable.** Serial diagnostics should make failures understandable before a GUI is available.
+5. **The system remains demonstrably working.** Major work should land as vertical slices with useful automated evidence.
+6. **Beauty follows coherence.** Visual polish, interaction design and source architecture should reinforce one another.
+7. **Truth over theatre.** A prototype feature is not called an OS capability until the relevant underlying layer genuinely exists.
