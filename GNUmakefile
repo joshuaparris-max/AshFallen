@@ -58,6 +58,7 @@ smoke: $(IMAGE).iso
 	grep -q JOSHOS_GDT_TSS_OK boot.log
 	grep -q JOSHOS_IDT_OK boot.log
 	grep -q JOSHOS_PROCESSES_READY boot.log
+	grep -q JOSHOS_ADDRESS_SPACES_OK boot.log
 	grep -q JOSHOS_RING3_ENTERED boot.log
 	grep -q JOSHOS_SYSCALL_ABI_OK boot.log
 	grep -q JOSHOS_USER_EFAULT_OK boot.log
