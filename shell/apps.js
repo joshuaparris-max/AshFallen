@@ -16,6 +16,20 @@
     return n;
   }
 
+  function api(path, options) {
+    options = options || {};
+    options.headers = options.headers || {};
+    if (options.body) options.headers['Content-Type'] = 'application/json';
+    return fetch(path, options).then(function (response) {
+      return response.json().then(function (data) {
+        if (!response.ok) throw new Error(data.message || ('HTTP ' + response.status));
+        return data;
+      });
+    });
+  }
+
+  /* ---------- About ---------- */
+
   JoshOS.registerApp({
     id: 'about',
     name: 'About Josh OS',
@@ -36,6 +50,8 @@
       body.appendChild(wrap);
     }
   });
+
+  /* ---------- Files ---------- */
 
   var FS = {
     Home: [
@@ -97,6 +113,8 @@
       markSidebar();
     }
   });
+
+  /* ---------- Terminal ---------- */
 
   JoshOS.registerApp({
     id: 'terminal',
@@ -175,6 +193,8 @@
     }
   });
 
+  /* ---------- Text editor ---------- */
+
   JoshOS.registerApp({
     id: 'editor',
     name: 'Text Editor',
@@ -189,6 +209,8 @@
     }
   });
 
+  /* ---------- Settings ---------- */
+
   JoshOS.registerApp({
     id: 'settings',
     name: 'Settings',
@@ -197,6 +219,7 @@
     height: 360,
     mount: function (body) {
       var wrap = el('div', 'app');
+
       wrap.appendChild(el('h2', null, 'Appearance'));
 
       var themeRow = el('div', 'row');
@@ -238,12 +261,127 @@
       wallRow.appendChild(wallBtns);
       wrap.appendChild(wallRow);
 
+      wrap.appendChild(el('h2', null, 'Network'));
+      var networkStatus = el('p', 'network-status', 'Checking network…');
+      var networkControls = el('div', 'network-controls');
+      var networkSelect = el('select', 'field');
+      var password = el('input', 'field');
+      password.type = 'password';
+      password.placeholder = 'Wi-Fi password';
+      password.autocomplete = 'current-password';
+
+      var refresh = el('button', 'btn ghost', 'Scan');
+      var connect = el('button', 'btn', 'Connect');
+      var disconnect = el('button', 'btn ghost', 'Disconnect');
+      var radio = el('button', 'btn ghost', 'Wi-Fi on/off');
+
+      networkControls.appendChild(networkSelect);
+      networkControls.appendChild(password);
+      networkControls.appendChild(connect);
+      networkControls.appendChild(refresh);
+      networkControls.appendChild(disconnect);
+      networkControls.appendChild(radio);
+      wrap.appendChild(networkStatus);
+      wrap.appendChild(networkControls);
+
+      function unavailable(err) {
+        networkStatus.textContent = 'Network controls are available in the booted Josh OS image. ' +
+          (err && err.message ? err.message : '');
+        networkSelect.innerHTML = '';
+        [password, connect, refresh, disconnect, radio].forEach(function (control) {
+          control.disabled = true;
+        });
+      }
+
+      function loadStatus() {
+        return api('/api/network/status').then(function (status) {
+          var connection = status.connection || 'not connected';
+          networkStatus.textContent =
+            'State: ' + status.state + ' · Internet: ' + status.connectivity +
+            ' · Wi-Fi: ' + status.wifi_radio + ' · ' + connection;
+          radio.textContent = status.wifi_radio === 'enabled' ? 'Turn Wi-Fi off' : 'Turn Wi-Fi on';
+          return status;
+        });
+      }
+
+      function scan() {
+        refresh.disabled = true;
+        return api('/api/network/wifi').then(function (data) {
+          networkSelect.innerHTML = '';
+          if (!data.networks.length) {
+            var empty = el('option', null, 'No Wi-Fi networks found');
+            empty.value = '';
+            networkSelect.appendChild(empty);
+          } else {
+            data.networks.forEach(function (network) {
+              var option = el('option', null,
+                network.ssid + ' · ' + network.signal + '% · ' + network.security);
+              option.value = network.ssid;
+              option.dataset.security = network.security;
+              networkSelect.appendChild(option);
+            });
+          }
+        }).finally(function () {
+          refresh.disabled = false;
+        });
+      }
+
+      refresh.onclick = function () {
+        scan().then(loadStatus).catch(unavailable);
+      };
+
+      connect.onclick = function () {
+        var ssid = networkSelect.value;
+        if (!ssid) return;
+        connect.disabled = true;
+        networkStatus.textContent = 'Connecting to ' + ssid + '…';
+        api('/api/network/connect', {
+          method: 'POST',
+          body: JSON.stringify({ ssid: ssid, password: password.value })
+        }).then(function (result) {
+          password.value = '';
+          JoshOS.notify('Network', result.message || ('Connected to ' + ssid));
+          return loadStatus();
+        }).then(scan).catch(function (err) {
+          networkStatus.textContent = 'Connection failed: ' + err.message;
+        }).finally(function () {
+          connect.disabled = false;
+        });
+      };
+
+      disconnect.onclick = function () {
+        api('/api/network/disconnect', { method: 'POST', body: '{}' })
+          .then(function (result) {
+            JoshOS.notify('Network', result.message || 'Disconnected');
+            return loadStatus();
+          }).catch(function (err) {
+            networkStatus.textContent = 'Disconnect failed: ' + err.message;
+          });
+      };
+
+      radio.onclick = function () {
+        var turnOn = radio.textContent.indexOf('on') !== -1;
+        api('/api/network/wifi-radio', {
+          method: 'POST',
+          body: JSON.stringify({ enabled: turnOn })
+        }).then(function () {
+          return loadStatus();
+        }).then(scan).catch(function (err) {
+          networkStatus.textContent = 'Wi-Fi control failed: ' + err.message;
+        });
+      };
+
+      Promise.all([loadStatus(), scan()]).catch(unavailable);
+
       wrap.appendChild(el('h2', null, 'System'));
       wrap.appendChild(el('p', null,
-        'Stage 0 product prototype. Settings that would touch real hardware are intentionally absent rather than faked — a dead toggle is worse than a missing one.'));
+        'Stage 0 uses real NetworkManager-backed controls when booted from the Josh OS image. Other hardware settings remain absent until they have real implementations.'));
+
       body.appendChild(wrap);
     }
   });
+
+  /* ---------- boot once the DOM is ready ---------- */
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', JoshOS.boot);
