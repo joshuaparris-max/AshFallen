@@ -178,6 +178,7 @@ static __attribute__((noreturn)) void kernel_after_paging(void) {
 
     serial_write("JOSHOS_BOOT_OK\n");
 
+    int keyboard_irq_proven = 0;
     for (;;) {
         e1000_poll();
 
@@ -188,6 +189,12 @@ static __attribute__((noreturn)) void kernel_after_paging(void) {
             if (event.type == INPUT_EVENT_KEY &&
                 event.pressed &&
                 event.character != 0) {
+                if (!keyboard_irq_proven &&
+                    event.character == 'a' &&
+                    keyboard_interrupt_count() != 0) {
+                    serial_write("JOSHOS_KEYBOARD_IRQ_OK\n");
+                    keyboard_irq_proven = 1;
+                }
                 shell_handle_key(event.character);
             }
         }
