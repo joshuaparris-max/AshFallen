@@ -18,10 +18,14 @@ static void serial_putc(char c) {
     outb(COM1, (uint8_t)c);
 }
 
+void serial_write_char(char c) {
+    if (c == '\n') serial_putc('\r');
+    serial_putc(c);
+}
+
 void serial_write(const char *text) {
     while (text && *text) {
-        if (*text == '\n') serial_putc('\r');
-        serial_putc(*text++);
+        serial_write_char(*text++);
     }
 }
 

@@ -70,6 +70,8 @@ int main(void) {
            context.memory_map[1].length == UINT64_C(0x100000) &&
            context.memory_map[1].type == BOOT_MEMORY_RESERVED);
     expect("framebuffer copied", (uintptr_t)context.framebuffer.address == 0xe0000000u);
+    expect("kernel physical base copied", context.kernel_phys_base == UINT64_C(0x200000));
+    expect("kernel virtual base copied", context.kernel_virt_base == UINT64_C(0xffffffff80000000));
     expect("RSDP copied", context.rsdp_phys == UINT64_C(0x000f0000));
     expect("SMBIOS copied", context.smbios_phys == UINT64_C(0x000f1000));
 

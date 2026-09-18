@@ -134,6 +134,8 @@ boot_status_t boot_josh_context_init(boot_context_t *context, const JoshBootInfo
     context->framebuffer.blue_mask_size = (uint8_t)info->framebuffer.blue_mask_size;
     context->framebuffer.blue_mask_shift = (uint8_t)info->framebuffer.blue_mask_shift;
     context->usable_memory_mib = usable_bytes / (1024u * 1024u);
+    context->kernel_phys_base = info->kernel_phys_start;
+    context->kernel_virt_base = info->kernel_virt_start;
     context->rsdp_phys =
         (info->flags & JOSH_BOOT_FLAG_RSDP) != 0 ? info->rsdp_phys : 0;
     context->smbios_phys =

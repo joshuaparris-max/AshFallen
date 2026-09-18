@@ -6,6 +6,7 @@
 #include "interrupts.h"
 #include "keyboard.h"
 #include "serial.h"
+#include "scheduler.h"
 #include "shell.h"
 
 static void halt_forever(void) {
@@ -130,6 +131,11 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
     }
     if (boot.smbios_phys != 0) {
         serial_write("JOSHOS_SMBIOS_OK\n");
+    }
+
+    if (!scheduler_run_userspace(&boot)) {
+        serial_write("JOSHOS_ERROR_USERSPACE_BOOTSTRAP\n");
+        halt_forever();
     }
 
     gfx_init(&boot.framebuffer);

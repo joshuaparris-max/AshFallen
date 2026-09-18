@@ -18,6 +18,12 @@ static volatile struct limine_memmap_request memmap_request = {
     .revision = 0
 };
 
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_executable_address_request executable_address_request = {
+    .id = LIMINE_EXECUTABLE_ADDRESS_REQUEST_ID,
+    .revision = 0
+};
+
 __attribute__((used, section(".limine_requests_start")))
 static volatile uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
 
@@ -110,7 +116,10 @@ boot_status_t boot_limine_context_init(boot_context_t *context) {
 
     boot_status_t memory_status = copy_memory_map(context, &context->usable_memory_mib);
     if (memory_status != BOOT_OK) return memory_status;
+    if (!executable_address_request.response) return BOOT_INVALID_BOOT_INFO;
 
+    context->kernel_phys_base = executable_address_request.response->physical_base;
+    context->kernel_virt_base = executable_address_request.response->virtual_base;
     context->rsdp_phys = 0;
     context->smbios_phys = 0;
     return BOOT_OK;
