@@ -43,7 +43,15 @@ mkdir -p "$(dirname "$GENERATED_PROFILE")"
 cp -a "$ARCHISO_PROFILE" "$GENERATED_PROFILE"
 
 packages=(
+  ca-certificates
+  ca-certificates-mozilla
   chromium
+  curl
+  iproute2
+  iw
+  linux-firmware
+  networkmanager
+  openssl
   lightdm
   lightdm-gtk-greeter
   mesa
@@ -54,6 +62,8 @@ packages=(
   xorg-xrandr
   xorg-xset
   xorg-xsetroot
+  wireless-regdb
+  wpa_supplicant
 )
 
 for package in "${packages[@]}"; do
@@ -84,6 +94,8 @@ iso_name="josh-os"
 iso_publisher="Josh OS <https://github.com/joshuaparris-max/AshFallen>"
 iso_application="Josh OS Stage 0 Live"
 file_permissions["/usr/local/bin/josh-os-session"]="0:0:0755"
+file_permissions["/usr/local/bin/josh-network-check"]="0:0:0755"
+file_permissions["/usr/local/bin/josh-wifi"]="0:0:0755"
 file_permissions["/etc/sudoers.d/10-josh-os-live"]="0:0:0440"
 PROFILE
 
@@ -91,6 +103,10 @@ mkdir -p "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants
 ln -sfn /usr/lib/systemd/system/graphical.target "$GENERATED_PROFILE/airootfs/etc/systemd/system/default.target"
 ln -sfn /usr/lib/systemd/system/lightdm.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/display-manager.service"
 ln -sfn /usr/lib/systemd/system/vboxservice.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/vboxservice.service"
+ln -sfn /usr/lib/systemd/system/NetworkManager.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/NetworkManager.service"
+ln -sfn /usr/lib/systemd/system/systemd-resolved.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/systemd-resolved.service"
+ln -sfn /usr/lib/systemd/system/systemd-timesyncd.service "$GENERATED_PROFILE/airootfs/etc/systemd/system/multi-user.target.wants/systemd-timesyncd.service"
+ln -sfn /run/systemd/resolve/stub-resolv.conf "$GENERATED_PROFILE/airootfs/etc/resolv.conf"
 
 while IFS= read -r -d '' cfg; do
   sed -i     -e 's/Arch Linux install medium/Josh OS live/g'     -e 's/Arch Linux/Josh OS/g'     "$cfg"
