@@ -64,7 +64,8 @@ OBJ := $(patsubst %.c,obj/%.o,$(C_SRC)) $(patsubst %.S,obj/%.o,$(ASM_SRC))
 DEPS := $(OBJ:.o=.d)
 HOST_TEST_BOOT := obj-host/test_boot_josh
 HOST_TEST_PMM := obj-host/test_pmm
-HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM)
+HOST_TEST_CPU := obj-host/test_cpu
+HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU)
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -91,9 +92,14 @@ $(HOST_TEST_PMM): tests/test_pmm.c src/pmm.c src/pmm.h src/boot.h
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_pmm.c src/pmm.c -o $@
 
+$(HOST_TEST_CPU): tests/test_cpu.c src/cpu.c src/cpu.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_cpu.c src/cpu.c -o $@
+
 host-tests: $(HOST_TESTS)
 	$(HOST_TEST_BOOT)
 	$(HOST_TEST_PMM)
+	$(HOST_TEST_CPU)
 
 clean:
 	rm -rf bin obj obj-host
