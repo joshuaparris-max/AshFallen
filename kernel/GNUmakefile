@@ -71,9 +71,10 @@ HOST_TEST_NETDEV := obj-host/test_net
 HOST_TEST_SPINLOCK := obj-host/test_spinlock
 HOST_TEST_ACPI := obj-host/test_acpi
 HOST_TEST_APIC_ROUTE := obj-host/test_apic_route
+HOST_TEST_PCI := obj-host/test_pci
 HOST_TEST_INPUT := obj-host/test_input
 HOST_TEST_TIMER := obj-host/test_timer
-HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET) $(HOST_TEST_NETDEV) $(HOST_TEST_SPINLOCK) $(HOST_TEST_ACPI) $(HOST_TEST_APIC_ROUTE) $(HOST_TEST_INPUT) $(HOST_TEST_TIMER)
+HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET) $(HOST_TEST_NETDEV) $(HOST_TEST_SPINLOCK) $(HOST_TEST_ACPI) $(HOST_TEST_APIC_ROUTE) $(HOST_TEST_PCI) $(HOST_TEST_INPUT) $(HOST_TEST_TIMER)
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -128,6 +129,10 @@ $(HOST_TEST_APIC_ROUTE): tests/test_apic_route.c src/apic_route.c src/apic.h src
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_apic_route.c src/apic_route.c -o $@
 
+$(HOST_TEST_PCI): tests/test_pci.c src/pci.c src/pci.h src/io.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_pci.c src/pci.c -o $@
+
 $(HOST_TEST_INPUT): tests/test_input.c src/input.c src/input.h
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_input.c src/input.c -o $@
@@ -146,6 +151,7 @@ host-tests: $(HOST_TESTS)
 	$(HOST_TEST_SPINLOCK)
 	$(HOST_TEST_ACPI)
 	$(HOST_TEST_APIC_ROUTE)
+	$(HOST_TEST_PCI)
 	$(HOST_TEST_INPUT)
 	$(HOST_TEST_TIMER)
 
