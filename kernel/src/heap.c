@@ -106,7 +106,8 @@ static void insert_region(heap_block_t *block) {
 
     heap_block_t *current = blocks;
     heap_block_t *previous = 0;
-    while (current && current < block) {
+    while (current &&
+           (uintptr_t)current < (uintptr_t)block) {
         previous = current;
         current = current->next;
     }
