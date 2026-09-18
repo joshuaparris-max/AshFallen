@@ -43,19 +43,48 @@ static int framebuffer_valid(const struct limine_framebuffer *fb) {
     return 1;
 }
 
-static uint64_t usable_memory_mib(void) {
-    if (!memmap_request.response) return 0;
-    uint64_t bytes = 0;
-    for (uint64_t i = 0; i < memmap_request.response->entry_count; ++i) {
-        struct limine_memmap_entry *entry = memmap_request.response->entries[i];
-        if (!entry || entry->type != LIMINE_MEMMAP_USABLE) continue;
-        if (UINT64_MAX - bytes < entry->length) {
-            bytes = UINT64_MAX;
-            break;
-        }
-        bytes += entry->length;
+static int add_overflows_u64(uint64_t a, uint64_t b) {
+    return UINT64_MAX - a < b;
+}
+
+static boot_status_t copy_memory_map(boot_context_t *context, uint64_t *usable_mib_out) {
+    if (!context || !usable_mib_out || !memmap_request.response ||
+        memmap_request.response->entry_count == 0 ||
+        memmap_request.response->entry_count > BOOT_MEMORY_MAX_ENTRIES) {
+        return BOOT_NO_MEMORY_MAP;
     }
-    return bytes / (1024u * 1024u);
+
+    context->memory_map_count = 0;
+    uint64_t usable_bytes = 0;
+
+    for (uint64_t i = 0; i < memmap_request.response->entry_count; ++i) {
+        const struct limine_memmap_entry *entry = memmap_request.response->entries[i];
+        if (!entry || entry->length == 0) continue;
+        if (add_overflows_u64(entry->base, entry->length)) {
+            return BOOT_INVALID_BOOT_INFO;
+        }
+
+        boot_memory_region_t *out =
+            &context->memory_map[context->memory_map_count++];
+        out->base = entry->base;
+        out->length = entry->length;
+        out->type = entry->type == LIMINE_MEMMAP_USABLE
+            ? BOOT_MEMORY_USABLE
+            : BOOT_MEMORY_RESERVED;
+        out->flags = 0;
+
+        if (out->type == BOOT_MEMORY_USABLE) {
+            if (add_overflows_u64(usable_bytes, out->length)) {
+                usable_bytes = UINT64_MAX;
+            } else {
+                usable_bytes += out->length;
+            }
+        }
+    }
+
+    if (context->memory_map_count == 0) return BOOT_NO_MEMORY_MAP;
+    *usable_mib_out = usable_bytes / (1024u * 1024u);
+    return BOOT_OK;
 }
 
 boot_status_t boot_limine_context_init(boot_context_t *context) {
@@ -78,7 +107,10 @@ boot_status_t boot_limine_context_init(boot_context_t *context) {
     context->framebuffer.green_mask_shift = fb->green_mask_shift;
     context->framebuffer.blue_mask_size = fb->blue_mask_size;
     context->framebuffer.blue_mask_shift = fb->blue_mask_shift;
-    context->usable_memory_mib = usable_memory_mib();
+
+    boot_status_t memory_status = copy_memory_map(context, &context->usable_memory_mib);
+    if (memory_status != BOOT_OK) return memory_status;
+
     context->rsdp_phys = 0;
     context->smbios_phys = 0;
     return BOOT_OK;
