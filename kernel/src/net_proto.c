@@ -14,13 +14,6 @@ static void write_be16(uint8_t *p, uint16_t value) {
     p[1] = (uint8_t)value;
 }
 
-static void write_be32(uint8_t *p, uint32_t value) {
-    p[0] = (uint8_t)(value >> 24);
-    p[1] = (uint8_t)(value >> 16);
-    p[2] = (uint8_t)(value >> 8);
-    p[3] = (uint8_t)value;
-}
-
 static void copy_bytes(uint8_t *destination, const uint8_t *source, size_t length) {
     while (length--) *destination++ = *source++;
 }
