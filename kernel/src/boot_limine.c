@@ -18,6 +18,12 @@ static volatile struct limine_memmap_request memmap_request = {
     .revision = 0
 };
 
+__attribute__((used, section(".limine_requests")))
+static volatile struct limine_kernel_address_request kernel_address_request = {
+    .id = LIMINE_KERNEL_ADDRESS_REQUEST_ID,
+    .revision = 0
+};
+
 __attribute__((used, section(".limine_requests_start")))
 static volatile uint64_t limine_requests_start_marker[] = LIMINE_REQUESTS_START_MARKER;
 
@@ -79,5 +85,8 @@ boot_status_t boot_limine_context_init(boot_context_t *context) {
     context->framebuffer.blue_mask_size = fb->blue_mask_size;
     context->framebuffer.blue_mask_shift = fb->blue_mask_shift;
     context->usable_memory_mib = usable_memory_mib();
+    if (!kernel_address_request.response) return BOOT_INVALID_BOOT_INFO;
+    context->kernel_phys_base = kernel_address_request.response->physical_base;
+    context->kernel_virt_base = kernel_address_request.response->virtual_base;
     return BOOT_OK;
 }
