@@ -51,6 +51,9 @@ typedef struct {
     uint64_t physical_memory_offset;
     uint64_t physical_memory_limit;
 
+    uint64_t framebuffer_phys_start;
+    uint64_t framebuffer_phys_end;
+
     uint64_t kernel_phys_start;
     uint64_t kernel_phys_end;
     uint64_t kernel_virt_start;
