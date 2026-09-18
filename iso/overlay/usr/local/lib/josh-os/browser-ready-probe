@@ -10,6 +10,15 @@ emit() {
   fi
 }
 
+emit_log() {
+  local prefix="$1"
+  local path="$2"
+  [[ -r "$path" ]] || return 0
+  while IFS= read -r line; do
+    emit "$prefix $line"
+  done <"$path"
+}
+
 ready=0
 for _ in $(seq 1 60); do
   browser_ok=0
@@ -41,6 +50,32 @@ if (( ! ready )); then
 fi
 
 emit "JOSHOS_BROWSER_READY"
+
+network_preconditions=0
+for _ in $(seq 1 60); do
+  nm_state="$(nmcli -t -f STATE general 2>/dev/null || true)"
+  ntp_state="$(timedatectl show -p NTPSynchronized --value 2>/dev/null || true)"
+  if printf '%s\n' "$nm_state" | grep -Eq '^connected' && [[ "$ntp_state" == "yes" ]]; then
+    network_preconditions=1
+    break
+  fi
+  sleep 1
+done
+
+if (( ! network_preconditions )); then
+  emit "JOSHOS_NETWORK_READY_FAIL"
+  /usr/local/bin/josh-network-check >/tmp/josh-os-network-check.log 2>&1 || true
+  emit_log "JOSHOS_NETWORK_DIAG" /tmp/josh-os-network-check.log
+  exit 1
+fi
+
+if /usr/local/bin/josh-network-check >/tmp/josh-os-network-check.log 2>&1; then
+  emit "JOSHOS_NETWORK_READY"
+else
+  emit "JOSHOS_NETWORK_READY_FAIL"
+  emit_log "JOSHOS_NETWORK_DIAG" /tmp/josh-os-network-check.log
+  exit 1
+fi
 
 if [[ -e /run/josh-os-persistence-active ]]; then
   probe_file="/home/josh/.josh-browser-persistence-probe"
