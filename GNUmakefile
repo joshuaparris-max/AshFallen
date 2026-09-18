@@ -55,6 +55,7 @@ run: $(IMAGE).iso
 smoke: $(IMAGE).iso
 	rm -f boot.log
 	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(IMAGE).iso -display none -serial stdio -no-reboot > boot.log 2>&1
+	cat boot.log
 	grep -q JOSHOS_GDT_TSS_OK boot.log
 	grep -q JOSHOS_IDT_OK boot.log
 	grep -q JOSHOS_PMM_OK boot.log
