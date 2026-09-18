@@ -6,6 +6,7 @@
 #include <getopt.h>
 #include <linux/input-event-codes.h>
 #include <stdbool.h>
+#include <signal.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -418,11 +419,37 @@ static void handle_cursor_frame(struct wl_listener *listener, void *data) {
     wlr_seat_pointer_notify_frame(server->seat);
 }
 
+static void spawn_shell_command(const char *command) {
+    pid_t child = fork();
+    if (child == 0) {
+        execl("/bin/sh", "/bin/sh", "-c", command, (char *)NULL);
+        _exit(127);
+    }
+}
+
 static bool handle_keybinding(
     struct josh_server *server,
     struct wlr_keyboard *keyboard,
     xkb_keysym_t sym) {
     uint32_t modifiers = wlr_keyboard_get_modifiers(keyboard);
+
+    switch (sym) {
+    case XKB_KEY_XF86AudioRaiseVolume:
+        spawn_shell_command("/usr/local/bin/josh-audio up");
+        return true;
+    case XKB_KEY_XF86AudioLowerVolume:
+        spawn_shell_command("/usr/local/bin/josh-audio down");
+        return true;
+    case XKB_KEY_XF86AudioMute:
+        spawn_shell_command("/usr/local/bin/josh-audio toggle");
+        return true;
+    case XKB_KEY_XF86AudioMicMute:
+        spawn_shell_command("/usr/local/bin/josh-audio mic-toggle");
+        return true;
+    default:
+        break;
+    }
+
     struct wlr_surface *focused = server->seat->keyboard_state.focused_surface;
     struct josh_view *view = focused != NULL ? view_from_surface(focused) : NULL;
 
@@ -880,6 +907,8 @@ static void handle_new_output(struct wl_listener *listener, void *data) {
 }
 
 static int run_server(const char *startup_command) {
+    signal(SIGCHLD, SIG_IGN);
+
     struct josh_server server = {0};
     wl_list_init(&server.outputs);
     wl_list_init(&server.views);
