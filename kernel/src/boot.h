@@ -40,6 +40,8 @@ typedef struct {
     boot_memory_region_t memory_map[BOOT_MEMORY_MAX_ENTRIES];
     uint32_t memory_map_count;
     uint64_t usable_memory_mib;
+    uint64_t kernel_phys_base;
+    uint64_t kernel_virt_base;
     uint64_t rsdp_phys;
     uint64_t smbios_phys;
 } boot_context_t;
