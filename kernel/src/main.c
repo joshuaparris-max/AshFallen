@@ -146,10 +146,10 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
 
     serial_write("JOSHOS_BOOT_ADAPTER_OK\n");
 
-    if (boot.rsdp_phys != 0) {
+    if (boot_context.rsdp_phys != 0) {
         serial_write("JOSHOS_RSDP_OK\n");
     }
-    if (boot.smbios_phys != 0) {
+    if (boot_context.smbios_phys != 0) {
         serial_write("JOSHOS_SMBIOS_OK\n");
     }
 
