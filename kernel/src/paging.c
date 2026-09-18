@@ -148,7 +148,8 @@ static int physical_map_limit(const boot_context_t *boot, uint64_t *limit_out) {
 
     for (uint32_t i = 0; i < boot->memory_map_count; ++i) {
         const boot_memory_region_t *region = &boot->memory_map[i];
-        if (region->length == 0 || UINT64_MAX - region->base < region->length) {
+        if (region->type != BOOT_MEMORY_USABLE || region->length == 0 ||
+            UINT64_MAX - region->base < region->length) {
             continue;
         }
         uint64_t end = region->base + region->length;
