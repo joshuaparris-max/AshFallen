@@ -6,6 +6,7 @@
 #include "boot.h"
 #include "cpu.h"
 #include "desktop.h"
+#include "e1000.h"
 #include "gdt.h"
 #include "gfx.h"
 #include "heap.h"
