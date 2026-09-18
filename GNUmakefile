@@ -4,6 +4,9 @@
 IMAGE := JoshOS-0.1-x86_64
 FAULT_IMAGE := JoshOS-fault-test-x86_64
 DOUBLE_FAULT_IMAGE := JoshOS-double-fault-test-x86_64
+DIVIDE_FAULT_IMAGE := JoshOS-divide-fault-test-x86_64
+PAGE_FAULT_IMAGE := JoshOS-page-fault-test-x86_64
+GP_FAULT_IMAGE := JoshOS-gp-fault-test-x86_64
 LIMINE_VERSION := 12.9.0
 LIMINE_SHA256 := 84059c93b4ea03994af6d614654c7095291388850ea7b258d64f9263abde5557
 LIMINE_URL := https://github.com/Limine-Bootloader/Limine/releases/download/v$(LIMINE_VERSION)/limine-binary.tar.gz
@@ -84,10 +87,41 @@ fault-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
 	$(MAKE) -C kernel clean
 	rm -f double-fault-boot.log $(DOUBLE_FAULT_IMAGE).iso
 
+	$(MAKE) IMAGE=$(DIVIDE_FAULT_IMAGE) EXTRA_CPPFLAGS=-DJOSHOS_FAULT_TEST_DIVIDE_ZERO $(DIVIDE_FAULT_IMAGE).iso
+	rm -f divide-fault-boot.log
+	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(DIVIDE_FAULT_IMAGE).iso -display none -serial stdio -no-reboot > divide-fault-boot.log 2>&1
+	grep -q JOSHOS_FAULT_TEST_DIVIDE_ZERO divide-fault-boot.log
+	grep -q 'VECTOR=0x0000000000000000' divide-fault-boot.log
+	grep -q JOSHOS_PANIC_HALT divide-fault-boot.log
+	@echo "Josh OS divide-by-zero smoke test passed."
+	$(MAKE) -C kernel clean
+	rm -f divide-fault-boot.log $(DIVIDE_FAULT_IMAGE).iso
+
+	$(MAKE) IMAGE=$(PAGE_FAULT_IMAGE) EXTRA_CPPFLAGS=-DJOSHOS_FAULT_TEST_PAGE_FAULT $(PAGE_FAULT_IMAGE).iso
+	rm -f page-fault-boot.log
+	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(PAGE_FAULT_IMAGE).iso -display none -serial stdio -no-reboot > page-fault-boot.log 2>&1
+	grep -q JOSHOS_FAULT_TEST_PAGE_FAULT page-fault-boot.log
+	grep -q 'VECTOR=0x000000000000000E' page-fault-boot.log
+	grep -q 'CR2=0x0000400000000000' page-fault-boot.log
+	grep -q JOSHOS_PANIC_HALT page-fault-boot.log
+	@echo "Josh OS page-fault smoke test passed."
+	$(MAKE) -C kernel clean
+	rm -f page-fault-boot.log $(PAGE_FAULT_IMAGE).iso
+
+	$(MAKE) IMAGE=$(GP_FAULT_IMAGE) EXTRA_CPPFLAGS=-DJOSHOS_FAULT_TEST_GP_FAULT $(GP_FAULT_IMAGE).iso
+	rm -f gp-fault-boot.log
+	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(GP_FAULT_IMAGE).iso -display none -serial stdio -no-reboot > gp-fault-boot.log 2>&1
+	grep -q JOSHOS_FAULT_TEST_GP_FAULT gp-fault-boot.log
+	grep -q 'VECTOR=0x000000000000000D' gp-fault-boot.log
+	grep -q JOSHOS_PANIC_HALT gp-fault-boot.log
+	@echo "Josh OS general-protection-fault smoke test passed."
+	$(MAKE) -C kernel clean
+	rm -f gp-fault-boot.log $(GP_FAULT_IMAGE).iso
+
 clean:
 	$(MAKE) -C kernel clean
-	rm -rf iso_root boot.log fault-boot.log double-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso
+	rm -rf iso_root boot.log fault-boot.log double-fault-boot.log divide-fault-boot.log page-fault-boot.log gp-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso $(DIVIDE_FAULT_IMAGE).iso $(PAGE_FAULT_IMAGE).iso $(GP_FAULT_IMAGE).iso
 
 distclean:
 	$(MAKE) -C kernel distclean
-	rm -rf iso_root boot.log fault-boot.log double-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso limine-binary limine-binary.tar.gz
+	rm -rf iso_root boot.log fault-boot.log double-fault-boot.log divide-fault-boot.log page-fault-boot.log gp-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso $(DIVIDE_FAULT_IMAGE).iso $(PAGE_FAULT_IMAGE).iso $(GP_FAULT_IMAGE).iso limine-binary limine-binary.tar.gz
