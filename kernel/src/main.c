@@ -68,6 +68,44 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
     halt_forever();
 #endif
 
+#ifdef JOSHOS_FAULT_TEST_DIVIDE_ZERO
+    serial_write("JOSHOS_FAULT_TEST_DIVIDE_ZERO\n");
+    __asm__ volatile (
+        "xorq %%rdx, %%rdx\n\t"
+        "movq $1, %%rax\n\t"
+        "xorq %%rcx, %%rcx\n\t"
+        "divq %%rcx"
+        :
+        :
+        : "rax", "rcx", "rdx"
+    );
+    serial_write("JOSHOS_ERROR_DIVIDE_ZERO_TEST_RETURNED\n");
+    halt_forever();
+#endif
+
+#ifdef JOSHOS_FAULT_TEST_PAGE_FAULT
+    serial_write("JOSHOS_FAULT_TEST_PAGE_FAULT\n");
+    volatile uint64_t *unmapped =
+        (volatile uint64_t *)(uintptr_t)UINT64_C(0x0000400000000000);
+    volatile uint64_t value = *unmapped;
+    (void)value;
+    serial_write("JOSHOS_ERROR_PAGE_FAULT_TEST_RETURNED\n");
+    halt_forever();
+#endif
+
+#ifdef JOSHOS_FAULT_TEST_GP_FAULT
+    serial_write("JOSHOS_FAULT_TEST_GP_FAULT\n");
+    __asm__ volatile (
+        "movw $0xffff, %%ax\n\t"
+        "movw %%ax, %%ds"
+        :
+        :
+        : "rax", "memory"
+    );
+    serial_write("JOSHOS_ERROR_GP_FAULT_TEST_RETURNED\n");
+    halt_forever();
+#endif
+
     boot_context_t boot;
     boot_status_t status = boot_context_init(&boot, loader_magic1, loader_magic2, loader_payload);
     if (status != BOOT_OK) {
