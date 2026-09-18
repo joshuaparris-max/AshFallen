@@ -55,6 +55,8 @@ int main(void) {
     expect("valid boot info", boot_josh_context_init(&context, &info) == BOOT_OK);
     expect("usable memory", context.usable_memory_mib == 64);
     expect("framebuffer copied", (uintptr_t)context.framebuffer.address == 0xe0000000u);
+    expect("kernel physical base copied", context.kernel_phys_base == 0x200000u);
+    expect("kernel virtual base copied", context.kernel_virt_base == UINT64_C(0xffffffff80000000));
 
     valid_info(&info, entries, framebuffer);
     info.magic ^= 1;
