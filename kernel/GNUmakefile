@@ -64,6 +64,7 @@ OBJ := $(patsubst %.c,obj/%.o,$(C_SRC)) $(patsubst %.S,obj/%.o,$(ASM_SRC))
 DEPS := $(OBJ:.o=.d)
 HOST_TEST := obj-host/test_boot_josh
 HOST_PCI_TEST := obj-host/test_pci
+HOST_PARTITION_TEST := obj-host/test_partition
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -90,9 +91,14 @@ $(HOST_PCI_TEST): tests/test_pci.c src/pci.c src/pci.h
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -DJOSHOS_HOST_TEST -I src tests/test_pci.c src/pci.c -o $@
 
-host-tests: $(HOST_TEST) $(HOST_PCI_TEST)
+$(HOST_PARTITION_TEST): tests/test_partition.c src/partition.c src/partition.h src/block.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_partition.c src/partition.c -o $@
+
+host-tests: $(HOST_TEST) $(HOST_PCI_TEST) $(HOST_PARTITION_TEST)
 	$(HOST_TEST)
 	$(HOST_PCI_TEST)
+	$(HOST_PARTITION_TEST)
 
 clean:
 	rm -rf bin obj obj-host
