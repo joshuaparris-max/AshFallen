@@ -61,6 +61,47 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
     );
 #endif
 
+#ifdef JOSHOS_FAULT_TEST_DIVIDE
+    serial_write("JOSHOS_FAULT_TEST_DIVIDE\n");
+    __asm__ volatile (
+        "mov $1, %%eax\n\t"
+        "xor %%edx, %%edx\n\t"
+        "xor %%ecx, %%ecx\n\t"
+        "div %%ecx"
+        :
+        :
+        : "rax", "rcx", "rdx", "memory"
+    );
+    serial_write("JOSHOS_ERROR_DIVIDE_TEST_RETURNED\n");
+    halt_forever();
+#endif
+
+#ifdef JOSHOS_FAULT_TEST_PAGE
+    serial_write("JOSHOS_FAULT_TEST_PAGE\n");
+    __asm__ volatile (
+        "movabs $0x0000004000000000, %%rax\n\t"
+        "movq $0x1, (%%rax)"
+        :
+        :
+        : "rax", "memory"
+    );
+    serial_write("JOSHOS_ERROR_PAGE_TEST_RETURNED\n");
+    halt_forever();
+#endif
+
+#ifdef JOSHOS_FAULT_TEST_GP
+    serial_write("JOSHOS_FAULT_TEST_GP\n");
+    __asm__ volatile (
+        "movw $0xffff, %%ax\n\t"
+        "movw %%ax, %%ds"
+        :
+        :
+        : "rax", "memory"
+    );
+    serial_write("JOSHOS_ERROR_GP_TEST_RETURNED\n");
+    halt_forever();
+#endif
+
 #ifdef JOSHOS_FAULT_TEST_DOUBLE_FAULT
     serial_write("JOSHOS_FAULT_TEST_DOUBLE_FAULT\n");
     interrupts_arm_double_fault_test();
