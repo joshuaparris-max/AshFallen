@@ -142,7 +142,7 @@ Josh OS is pre-alpha.
 
 The native desktop is not yet a compositor and lacks mouse/USB, processes, userspace, filesystem, networking, audio and accelerated graphics.
 
-The Stage 0 product ISO is intentionally a compatibility vehicle: ArchISO + LightDM + Openbox + Chromium host the prototype. It is not the final Wayland architecture.
+The Stage 0 product ISO is intentionally a compatibility vehicle: ArchISO + LightDM + Openbox + Chromium host the prototype. It is not the final Wayland architecture. The image includes `josh-youtube-acceptance` for the final physical-hardware browser test; CI can prove browser/media/network/persistence plumbing, but a human must still verify Google sign-in, audible playback, reboot and retained sign-in on the target machine.
 
 ## Documentation
 

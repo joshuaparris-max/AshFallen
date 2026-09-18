@@ -33,6 +33,7 @@ jobs:
           bash -n iso/overlay/usr/local/bin/josh-os-session
           bash -n iso/overlay/usr/local/bin/josh-os-browser
           bash -n iso/overlay/usr/local/bin/josh-os-browser-diagnostics
+          bash -n iso/overlay/usr/local/bin/josh-youtube-acceptance
           bash -n iso/overlay/usr/local/bin/josh-network-check
           bash -n iso/overlay/usr/local/bin/josh-wifi
           bash -n iso/overlay/usr/local/lib/josh-os/prepare-persistent-home

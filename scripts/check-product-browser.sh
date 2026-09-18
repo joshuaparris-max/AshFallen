@@ -36,13 +36,14 @@ for package in "${required_packages[@]}"; do
 done
 
 launcher="$root/usr/local/bin/josh-os-browser"
+acceptance="$root/usr/local/bin/josh-youtube-acceptance"
 session="$root/usr/local/bin/josh-os-session"
 persist="$root/usr/local/lib/josh-os/prepare-persistent-home"
 media_probe="$root/usr/local/lib/josh-os/browser-media-probe"
 media_page="$root/usr/local/share/josh-os/browser-media-probe.html"
 policy="$root/etc/chromium/policies/managed/josh-os.json"
 
-for path in "$launcher" "$session" "$persist" "$media_probe" "$media_page" "$policy"; do
+for path in "$launcher" "$acceptance" "$session" "$persist" "$media_probe" "$media_page" "$policy"; do
   [[ -f "$path" ]] || { echo "browser check: missing $path" >&2; exit 1; }
 done
 
