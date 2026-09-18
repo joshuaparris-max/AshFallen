@@ -92,6 +92,7 @@ static void test_udp(void) {
     assert(udp.destination_port == 53);
     assert(udp.payload_length == sizeof(payload));
     assert(udp.checksum != 0);
+    assert(josh_udp_checksum_ipv4(src, dst, segment, length) == 0);
     segment[5] = 7;
     assert(josh_udp_parse(segment, length, &udp) == JOSH_NET_ERR_MALFORMED);
 }
@@ -119,6 +120,22 @@ static void test_tcp(void) {
 }
 
 static void test_dhcp(void) {
+    const uint8_t mac[6] = {0x52,0x54,0x00,0x12,0x34,0x56};
+    const uint8_t requested[4] = {10,0,2,15};
+    const uint8_t server[4] = {10,0,2,2};
+    uint8_t request[300] = {0};
+    size_t discover_length =
+        josh_dhcp_build_discover(request, sizeof(request), 0xaabbccddu, mac);
+    assert(discover_length >= 248);
+    assert(request[0] == 1 && request[1] == 1 && request[2] == 6);
+    assert(request[28] == mac[0] && request[33] == mac[5]);
+    assert(request[240] == 53 && request[242] == 1);
+
+    size_t request_length = josh_dhcp_build_request(
+        request, sizeof(request), 0xaabbccddu, mac, requested, server);
+    assert(request_length > discover_length);
+    assert(request[242] == 3);
+
     uint8_t packet[300] = {0};
     packet[0] = 2;
     packet[1] = 1;
