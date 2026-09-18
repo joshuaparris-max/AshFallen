@@ -93,7 +93,7 @@ fault-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
 	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(PAGE_FAULT_IMAGE).iso -display none -serial stdio -no-reboot > page-fault-boot.log 2>&1
 	grep -q JOSHOS_FAULT_TEST_PAGE page-fault-boot.log
 	grep -q 'VECTOR=0x000000000000000e' page-fault-boot.log
-	grep -q 'CR2=0x0000004000000000' page-fault-boot.log
+	grep -q 'CR2=0x00007ffffffff000' page-fault-boot.log
 	grep -q JOSHOS_REGISTER_DUMP page-fault-boot.log
 	grep -q JOSHOS_PANIC_HALT page-fault-boot.log
 	@echo "Josh OS page-fault smoke test passed."
