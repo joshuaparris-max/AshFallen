@@ -24,7 +24,9 @@ typedef struct {
 
 pmm_status_t pmm_init(const boot_context_t *boot);
 uint64_t pmm_alloc_frame(void);
+uint64_t pmm_alloc_frames(uint32_t frame_count);
 pmm_status_t pmm_free_frame(uint64_t physical_address);
+pmm_status_t pmm_free_frames(uint64_t physical_address, uint32_t frame_count);
 pmm_stats_t pmm_stats(void);
 int pmm_self_test(uint32_t frame_count);
 const char *pmm_status_string(pmm_status_t status);
