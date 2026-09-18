@@ -4,6 +4,7 @@
 #include <string.h>
 
 static int failures;
+static const char test_command_line[] = "josh.boot=normal";
 
 static void expect(const char *name, int condition) {
     if (!condition) {
@@ -23,9 +24,12 @@ static void valid_info(JoshBootInfo *info, JoshMemoryMapEntry *entries, uint32_t
         JOSH_BOOT_FLAG_MEMORY_MAP |
         JOSH_BOOT_FLAG_FRAMEBUFFER |
         JOSH_BOOT_FLAG_RSDP |
-        JOSH_BOOT_FLAG_SMBIOS;
+        JOSH_BOOT_FLAG_SMBIOS |
+        JOSH_BOOT_FLAG_CMDLINE;
     info->rsdp_phys = UINT64_C(0x000f0000);
     info->smbios_phys = UINT64_C(0x000f1000);
+    info->command_line_address = (uintptr_t)test_command_line;
+    info->command_line_length = sizeof(test_command_line) - 1u;
     info->memory_map_address = (uintptr_t)entries;
     info->memory_map_entries = 2;
     info->memory_map_entry_size = sizeof(*entries);
@@ -72,6 +76,7 @@ int main(void) {
     expect("framebuffer copied", (uintptr_t)context.framebuffer.address == 0xe0000000u);
     expect("RSDP copied", context.rsdp_phys == UINT64_C(0x000f0000));
     expect("SMBIOS copied", context.smbios_phys == UINT64_C(0x000f1000));
+    expect("command line copied", strcmp(context.command_line, test_command_line) == 0);
     expect("Josh identity physical map", context.physical_memory_offset == 0);
     expect("Josh physical map limit", context.physical_memory_limit == UINT64_C(0x100000000));
     expect("kernel physical bounds",
@@ -101,6 +106,18 @@ int main(void) {
     info.framebuffer.address = 0xe0000000u;
     info.smbios_phys = 0;
     expect("advertised SMBIOS without pointer rejected",
+           boot_josh_context_init(&context, &info) == BOOT_INVALID_BOOT_INFO);
+
+    valid_info(&info, entries, framebuffer);
+    info.framebuffer.address = 0xe0000000u;
+    info.command_line_address = 0;
+    expect("advertised command line without pointer rejected",
+           boot_josh_context_init(&context, &info) == BOOT_INVALID_BOOT_INFO);
+
+    valid_info(&info, entries, framebuffer);
+    info.framebuffer.address = 0xe0000000u;
+    info.command_line_length = BOOT_COMMAND_LINE_MAX + 1u;
+    expect("oversized command line rejected",
            boot_josh_context_init(&context, &info) == BOOT_INVALID_BOOT_INFO);
 
     valid_info(&info, entries, framebuffer);
