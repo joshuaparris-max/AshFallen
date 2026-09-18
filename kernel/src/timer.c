@@ -57,6 +57,10 @@ uint64_t timer_ticks(void) {
     return __atomic_load_n(&tick_count, __ATOMIC_RELAXED);
 }
 
+uint32_t timer_frequency_hz(void) {
+    return initialised ? configured_hz : 0;
+}
+
 uint64_t timer_now_ns(void) {
     uint64_t ticks = timer_ticks();
     if (!initialised || nanoseconds_per_tick == 0) return 0;
