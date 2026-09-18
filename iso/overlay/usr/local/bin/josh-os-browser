@@ -14,6 +14,12 @@ downloads="${JOSH_BROWSER_DOWNLOADS:-$HOME/Downloads}"
 mkdir -p "$profile" "$downloads"
 chmod 700 "$profile" "$downloads"
 
+# A power cut can leave Chromium per-profile singleton files behind. Remove
+# them only when no Chromium process is actually using this exact profile.
+if ! pgrep -u "$(id -u)" -f -- "--user-data-dir=$profile" >/dev/null 2>&1; then
+  rm -f "$profile/SingletonLock" "$profile/SingletonSocket" "$profile/SingletonCookie"
+fi
+
 # Do not add --no-sandbox: Chromium keeps its normal Linux sandbox.
 # Do not add --disable-gpu: compositing/GPU acceleration stays available.
 # VA-API feature flags are intentionally not forced because Chromium changes

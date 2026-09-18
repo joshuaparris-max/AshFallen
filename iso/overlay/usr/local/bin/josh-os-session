@@ -52,14 +52,27 @@ shell_pid=$!
 xdg-settings set default-web-browser josh-os-browser.desktop >/tmp/josh-os-default-browser.log 2>&1 || true
 
 # Boot directly into the real browser. Crash exits are relaunched with the same
-# profile; a clean user close falls back to the Josh shell underneath.
+# profile; a clean user close falls back to the Josh shell underneath. Repeated
+# quick crashes use bounded backoff instead of hot-looping forever.
+browser_crashes=0
 while true; do
+  browser_started=$SECONDS
   /usr/local/bin/josh-os-browser chrome://newtab >/tmp/josh-os-browser.log 2>&1
   status=$?
   if [[ $status -eq 0 ]]; then
     break
   fi
-  sleep 1
+
+  runtime=$((SECONDS - browser_started))
+  if (( runtime >= 30 )); then
+    browser_crashes=1
+  else
+    browser_crashes=$((browser_crashes + 1))
+  fi
+  delay=$browser_crashes
+  (( delay > 10 )) && delay=10
+  logger -t josh-os-session "Chromium exited status=$status after ${runtime}s; restarting in ${delay}s"
+  sleep "$delay"
 done
 
 wait "$shell_pid"
