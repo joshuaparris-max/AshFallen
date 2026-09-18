@@ -3,6 +3,24 @@
 
 #include <stdint.h>
 
+#define BOOT_MEMORY_MAX_ENTRIES 128u
+
+typedef enum {
+    BOOT_MEMORY_RESERVED = 0,
+    BOOT_MEMORY_USABLE = 1,
+    BOOT_MEMORY_ACPI_RECLAIMABLE = 2,
+    BOOT_MEMORY_ACPI_NVS = 3,
+    BOOT_MEMORY_BAD = 4
+} boot_memory_type_t;
+
+typedef struct {
+    uint64_t base;
+    uint64_t length;
+    boot_memory_type_t type;
+    uint32_t flags;
+} boot_memory_region_t;
+
+
 typedef struct {
     void *address;
     uint64_t width;
@@ -19,6 +37,8 @@ typedef struct {
 
 typedef struct {
     boot_framebuffer_t framebuffer;
+    boot_memory_region_t memory_map[BOOT_MEMORY_MAX_ENTRIES];
+    uint32_t memory_map_count;
     uint64_t usable_memory_mib;
     uint64_t rsdp_phys;
     uint64_t smbios_phys;
