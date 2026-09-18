@@ -8,13 +8,13 @@ It is intentionally broader than the kernel roadmap. The goal is to make every l
 
 | Layer | Canonical home | Responsibility |
 |---|---|---|
-| Board-specific hardware bring-up | JoshFirmware work in `Parris-Tech-Services/MIDIVisualizer` | CPU/chipset/DRAM/platform initialisation through a supported firmware foundation |
-| Firmware UX and policy | JoshBIOS work in `Parris-Tech-Services/MIDIVisualizer` | splash/setup, hardware inventory, boot order, recovery entry, firmware settings |
-| Kernel loading | JoshBootloader work in `Parris-Tech-Services/MIDIVisualizer` | discover bootable Josh systems, select an entry, load ELF64, construct boot information, enter x86-64 kernel |
+| Board-specific hardware bring-up | JoshFirmware work in `Parris-Tech-Services/JoshBIOS` | CPU/chipset/DRAM/platform initialisation through a supported firmware foundation |
+| Firmware UX and policy | JoshBIOS work in `Parris-Tech-Services/JoshBIOS` | splash/setup, hardware inventory, boot order, recovery entry, firmware settings |
+| Kernel loading | JoshBootloader work in `Parris-Tech-Services/JoshBIOS` | discover bootable Josh systems, select an entry, load ELF64, construct boot information, enter x86-64 kernel |
 | Native kernel | `kernel/` in this repository | memory, interrupts, processes, devices, filesystems, networking, security primitives |
 | System services/userspace | this repository | init/service model, session/device/file/settings services, app APIs |
 | Desktop/product | this repository | compositor, shell, launcher, settings, apps, first-run and recovery UX |
-| Stage-0 compatibility extraction | `Parris-Tech-Services/transfer2` | fast product prototyping and ArchISO compatibility image |
+| Stage-0 compatibility extraction | `Parris-Tech-Services/JoshOS-Stage0` | fast product prototyping and ArchISO compatibility image |
 
 The small kernel in the JoshBIOS repository is only a boot-stack payload. **The canonical native Josh kernel is `AshFallen/kernel`.**
 
