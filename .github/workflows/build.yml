@@ -41,6 +41,9 @@ jobs:
       - name: Boot smoke test
         run: make smoke
 
+      - name: PCI storage discovery smoke test
+        run: make storage-smoke
+
       - name: Exception fault smoke test
         run: make fault-smoke
 

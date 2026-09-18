@@ -63,6 +63,7 @@ ASM_SRC := $(shell find src -type f -name '*.S' | LC_ALL=C sort)
 OBJ := $(patsubst %.c,obj/%.o,$(C_SRC)) $(patsubst %.S,obj/%.o,$(ASM_SRC))
 DEPS := $(OBJ:.o=.d)
 HOST_TEST := obj-host/test_boot_josh
+HOST_PCI_TEST := obj-host/test_pci
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -85,8 +86,13 @@ $(HOST_TEST): tests/test_boot_josh.c src/boot_josh.c src/boot.h src/boot_interna
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_boot_josh.c src/boot_josh.c -o $@
 
-host-tests: $(HOST_TEST)
+$(HOST_PCI_TEST): tests/test_pci.c src/pci.c src/pci.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -DJOSHOS_HOST_TEST -I src tests/test_pci.c src/pci.c -o $@
+
+host-tests: $(HOST_TEST) $(HOST_PCI_TEST)
 	$(HOST_TEST)
+	$(HOST_PCI_TEST)
 
 clean:
 	rm -rf bin obj obj-host

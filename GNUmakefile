@@ -11,7 +11,7 @@ LIMINE_VERSION := 12.9.0
 LIMINE_SHA256 := 84059c93b4ea03994af6d614654c7095291388850ea7b258d64f9263abde5557
 LIMINE_URL := https://github.com/Limine-Bootloader/Limine/releases/download/v$(LIMINE_VERSION)/limine-binary.tar.gz
 
-.PHONY: all kernel host-tests run smoke fault-smoke clean distclean
+.PHONY: all kernel host-tests run smoke storage-smoke fault-smoke clean distclean
 all: $(IMAGE).iso
 
 limine-binary.tar.gz:
@@ -57,8 +57,23 @@ smoke: $(IMAGE).iso
 	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(IMAGE).iso -display none -serial stdio -no-reboot > boot.log 2>&1
 	grep -q JOSHOS_GDT_TSS_OK boot.log
 	grep -q JOSHOS_IDT_OK boot.log
+	grep -q JOSHOS_PCI_SCAN_OK boot.log
 	grep -q JOSHOS_BOOT_OK boot.log
 	@echo "Josh OS boot smoke test passed."
+
+storage-smoke: $(IMAGE).iso
+	rm -f storage-boot.log storage-nvme.img
+	truncate -s 16777216 storage-nvme.img
+	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(IMAGE).iso \
+		-drive if=none,id=nvme0,file=storage-nvme.img,format=raw \
+		-device nvme,drive=nvme0,serial=JOSHNVME0 \
+		-display none -serial stdio -no-reboot > storage-boot.log 2>&1
+	grep -q JOSHOS_PCI_SCAN_OK storage-boot.log
+	grep -q JOSHOS_STORAGE_AHCI_FOUND storage-boot.log
+	grep -q JOSHOS_STORAGE_NVME_FOUND storage-boot.log
+	grep -q JOSHOS_BOOT_OK storage-boot.log
+	rm -f storage-nvme.img
+	@echo "Josh OS PCI AHCI/NVMe discovery smoke test passed."
 
 fault-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
 	$(MAKE) -C kernel clean
@@ -128,8 +143,8 @@ fault-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
 
 clean:
 	$(MAKE) -C kernel clean
-	rm -rf iso_root boot.log fault-boot.log divide-fault-boot.log page-fault-boot.log gp-fault-boot.log double-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DIVIDE_FAULT_IMAGE).iso $(PAGE_FAULT_IMAGE).iso $(GP_FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso
+	rm -rf iso_root boot.log storage-boot.log storage-nvme.img fault-boot.log divide-fault-boot.log page-fault-boot.log gp-fault-boot.log double-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DIVIDE_FAULT_IMAGE).iso $(PAGE_FAULT_IMAGE).iso $(GP_FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso
 
 distclean:
 	$(MAKE) -C kernel distclean
-	rm -rf iso_root boot.log fault-boot.log divide-fault-boot.log page-fault-boot.log gp-fault-boot.log double-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DIVIDE_FAULT_IMAGE).iso $(PAGE_FAULT_IMAGE).iso $(GP_FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso limine-binary limine-binary.tar.gz
+	rm -rf iso_root boot.log storage-boot.log storage-nvme.img fault-boot.log divide-fault-boot.log page-fault-boot.log gp-fault-boot.log double-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DIVIDE_FAULT_IMAGE).iso $(PAGE_FAULT_IMAGE).iso $(GP_FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso limine-binary limine-binary.tar.gz
