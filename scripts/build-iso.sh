@@ -63,6 +63,7 @@ packages=(
   linux-firmware
   mesa
   networkmanager
+  nodejs
   noto-fonts
   openbox
   openssl
@@ -122,6 +123,7 @@ file_permissions["/usr/local/bin/josh-network-acceptance"]="0:0:0755"
 file_permissions["/usr/local/lib/josh-os/network-control.py"]="0:0:0755"
 file_permissions["/usr/local/lib/josh-os/prepare-persistent-home"]="0:0:0755"
 file_permissions["/usr/local/lib/josh-os/browser-ready-probe"]="0:0:0755"
+file_permissions["/usr/local/lib/josh-os/browser-acceptance.mjs"]="0:0:0644"
 file_permissions["/usr/local/lib/josh-os/browser-media-probe"]="0:0:0755"
 file_permissions["/etc/sudoers.d/10-josh-os-live"]="0:0:0440"
 PROFILE
