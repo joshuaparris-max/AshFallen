@@ -19,7 +19,13 @@ static void valid_info(JoshBootInfo *info, JoshMemoryMapEntry *entries, uint32_t
     info->abi_major = JOSH_BOOT_ABI_MAJOR;
     info->abi_minor = JOSH_BOOT_ABI_MINOR;
     info->total_size = sizeof(*info);
-    info->flags = JOSH_BOOT_FLAG_MEMORY_MAP | JOSH_BOOT_FLAG_FRAMEBUFFER;
+    info->flags =
+        JOSH_BOOT_FLAG_MEMORY_MAP |
+        JOSH_BOOT_FLAG_FRAMEBUFFER |
+        JOSH_BOOT_FLAG_RSDP |
+        JOSH_BOOT_FLAG_SMBIOS;
+    info->rsdp_phys = UINT64_C(0x000f0000);
+    info->smbios_phys = UINT64_C(0x000f1000);
     info->memory_map_address = (uintptr_t)entries;
     info->memory_map_entries = 2;
     info->memory_map_entry_size = sizeof(*entries);
@@ -55,6 +61,8 @@ int main(void) {
     expect("valid boot info", boot_josh_context_init(&context, &info) == BOOT_OK);
     expect("usable memory", context.usable_memory_mib == 64);
     expect("framebuffer copied", (uintptr_t)context.framebuffer.address == 0xe0000000u);
+    expect("RSDP copied", context.rsdp_phys == UINT64_C(0x000f0000));
+    expect("SMBIOS copied", context.smbios_phys == UINT64_C(0x000f1000));
 
     valid_info(&info, entries, framebuffer);
     info.magic ^= 1;
@@ -68,6 +76,18 @@ int main(void) {
     info.framebuffer.address = 0xe0000000u;
     info.framebuffer.pitch = 4;
     expect("bad framebuffer pitch rejected", boot_josh_context_init(&context, &info) == BOOT_UNSUPPORTED_FRAMEBUFFER);
+
+    valid_info(&info, entries, framebuffer);
+    info.framebuffer.address = 0xe0000000u;
+    info.rsdp_phys = 0;
+    expect("advertised RSDP without pointer rejected",
+           boot_josh_context_init(&context, &info) == BOOT_INVALID_BOOT_INFO);
+
+    valid_info(&info, entries, framebuffer);
+    info.framebuffer.address = 0xe0000000u;
+    info.smbios_phys = 0;
+    expect("advertised SMBIOS without pointer rejected",
+           boot_josh_context_init(&context, &info) == BOOT_INVALID_BOOT_INFO);
 
     valid_info(&info, entries, framebuffer);
     info.framebuffer.address = 0xe0000000u;
