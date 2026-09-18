@@ -168,22 +168,55 @@ pmm_status_t pmm_init(const boot_context_t *boot) {
     return PMM_OK;
 }
 
+uint64_t pmm_alloc_frames(uint32_t frame_count) {
+    if (!initialised || frame_count == 0 ||
+        frame_count > free_frames ||
+        (uint64_t)frame_count > UINT64_MAX / PMM_PAGE_SIZE) {
+        return PMM_INVALID_FRAME;
+    }
+
+    uint64_t bytes = (uint64_t)frame_count * PMM_PAGE_SIZE;
+    for (uint32_t i = 0; i < free_range_count; ++i) {
+        uint64_t available = free_ranges[i].end - free_ranges[i].start;
+        if (available < bytes) continue;
+
+        uint64_t frame = free_ranges[i].start;
+        free_ranges[i].start += bytes;
+        if (free_ranges[i].start == free_ranges[i].end) erase_range(i);
+        free_frames -= frame_count;
+        return frame;
+    }
+    return PMM_INVALID_FRAME;
+}
+
 uint64_t pmm_alloc_frame(void) {
-    if (!initialised || free_range_count == 0) return PMM_INVALID_FRAME;
-    uint64_t frame = free_ranges[0].start;
-    free_ranges[0].start += PMM_PAGE_SIZE;
-    if (free_ranges[0].start == free_ranges[0].end) erase_range(0);
-    free_frames--;
-    return frame;
+    return pmm_alloc_frames(1);
+}
+
+pmm_status_t pmm_free_frames(uint64_t frame, uint32_t frame_count) {
+    if (!initialised || frame_count == 0 ||
+        (frame & (PMM_PAGE_SIZE - 1u)) != 0 ||
+        (uint64_t)frame_count > UINT64_MAX / PMM_PAGE_SIZE) {
+        return PMM_INVALID_FREE;
+    }
+
+    uint64_t bytes = (uint64_t)frame_count * PMM_PAGE_SIZE;
+    if (UINT64_MAX - frame < bytes) return PMM_INVALID_FREE;
+    uint64_t end = frame + bytes;
+
+    for (uint64_t current = frame; current < end; current += PMM_PAGE_SIZE) {
+        if (!frame_is_managed(current)) return PMM_INVALID_FREE;
+        if (frame_is_free(current)) return PMM_DOUBLE_FREE;
+    }
+
+    pmm_status_t status = insert_free_range(frame, end);
+    if (status != PMM_OK) return status;
+    free_frames += frame_count;
+    return PMM_OK;
 }
 
 pmm_status_t pmm_free_frame(uint64_t frame) {
-    if (!initialised || (frame & (PMM_PAGE_SIZE - 1u)) != 0 || !frame_is_managed(frame)) return PMM_INVALID_FREE;
-    if (frame_is_free(frame)) return PMM_DOUBLE_FREE;
-    pmm_status_t status = insert_free_range(frame, frame + PMM_PAGE_SIZE);
-    if (status != PMM_OK) return status;
-    free_frames++;
-    return PMM_OK;
+    return pmm_free_frames(frame, 1);
 }
 
 pmm_stats_t pmm_stats(void) {
