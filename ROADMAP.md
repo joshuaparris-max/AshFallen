@@ -4,6 +4,17 @@ Josh OS is being built through two complementary tracks: a **product track** tha
 
 Every milestone should leave its implementation understandable and demonstrably working.
 
+## Deep roadmaps
+
+- [Power button → desktop](docs/POWER_ON_TO_DESKTOP_ROADMAP.md) — whole-stack ownership, firmware/start screen, boot menu, recovery, updates and physical-hardware support.
+- [Native kernel](docs/KERNEL_ROADMAP.md) — exceptions, memory, interrupts, processes, storage, networking, USB, graphics, power and security.
+- [Josh Boot Protocol](docs/BOOT_ABI.md) — future JoshBootloader ↔ canonical kernel contract.
+- [Current boot stack](docs/BOOT_STACK.md) — today’s Limine adapter and branded Josh OS Boot Manager.
+- [Product/start/recovery experience](docs/product/OS_EXPERIENCE_ROADMAP.md) — firmware/OS splash continuity, first-run, session, accessibility, updates and recovery.
+- [Product track](docs/product/ROADMAP.md) — Linux-backed usable desktop and convergence.
+
+The current **Josh OS Boot Manager** is the branded Limine menu and remains a useful reference path. The long-term pre-kernel menu belongs in JoshBootloader once it can boot this canonical kernel reliably.
+
 ## Native kernel 0.1 — It lives
 
 - [x] x86-64 kernel entry point
