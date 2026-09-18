@@ -1,0 +1,89 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+reconnect=0
+case "${1:-}" in
+  "") ;;
+  --reconnect) reconnect=1 ;;
+  -h|--help)
+    cat <<'EOF'
+Usage: josh-network-acceptance [--reconnect]
+
+Runs the Josh OS Internet readiness checks and records the real network devices
+and drivers in use. --reconnect additionally cycles the active NetworkManager
+connection and proves that it returns to Internet-ready state.
+
+Use --reconnect only during deliberate hardware acceptance testing because it
+briefly disconnects the machine.
+EOF
+    exit 0
+    ;;
+  *) echo "unknown argument: $1" >&2; exit 2 ;;
+esac
+
+echo "Josh OS physical network acceptance"
+echo "==================================="
+echo
+
+/usr/local/bin/josh-network-check
+
+echo
+echo "Network hardware:"
+nmcli -t -e yes -f DEVICE,TYPE,STATE,CONNECTION device status |
+while IFS=: read -r device type state connection; do
+  [[ -n "$device" ]] || continue
+  driver="unknown"
+  if [[ -L "/sys/class/net/$device/device/driver" ]]; then
+    driver="$(basename "$(readlink -f "/sys/class/net/$device/device/driver")")"
+  elif [[ "$device" == lo ]]; then
+    driver="loopback"
+  fi
+  printf '%-12s type=%-10s state=%-20s driver=%s connection=%s\n'     "$device" "$type" "$state" "$driver" "$connection"
+done
+
+wifi_device="$(nmcli -t -e yes -f DEVICE,TYPE device status |
+  awk -F: '$2 == "wifi" { print $1; exit }')"
+if [[ -n "$wifi_device" ]]; then
+  echo
+  echo "Wi-Fi radio/regulatory state:"
+  nmcli radio wifi
+  iw reg get 2>/dev/null | sed -n '1,12p' || true
+  echo
+  echo "Visible Wi-Fi networks:"
+  nmcli -f IN-USE,SSID,SECURITY,SIGNAL device wifi list ifname "$wifi_device" || true
+fi
+
+if (( reconnect )); then
+  active_line="$(nmcli -t -e yes -f NAME,DEVICE connection show --active |
+    awk -F: '$2 != "" && $2 != "lo" { print; exit }')"
+  [[ -n "$active_line" ]] || {
+    echo "FAIL  no active non-loopback NetworkManager connection to cycle" >&2
+    exit 1
+  }
+  connection="${active_line%%:*}"
+  device="${active_line#*:}"
+
+  echo
+  echo "Cycling active connection '$connection' on $device..."
+  nmcli connection down "$connection"
+  nmcli connection up "$connection"
+
+  ready=0
+  for _ in $(seq 1 60); do
+    if nmcli -t -f STATE general | grep -q '^connected$'; then
+      ready=1
+      break
+    fi
+    sleep 1
+  done
+  (( ready )) || {
+    echo "FAIL  NetworkManager did not reconnect within the acceptance window" >&2
+    exit 1
+  }
+
+  /usr/local/bin/josh-network-check
+  echo "PASS  disconnect/reconnect recovery"
+fi
+
+echo
+echo "JOSHOS_PHYSICAL_NETWORK_ACCEPTANCE_PASS"
