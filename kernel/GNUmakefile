@@ -29,6 +29,14 @@ CFLAGS := \
 	-mgeneral-regs-only \
 	-mcmodel=kernel
 
+ASFLAGS := \
+	-target x86_64-unknown-none-elf \
+	-g \
+	-m64 \
+	-march=x86-64 \
+	-mno-red-zone \
+	-mcmodel=kernel
+
 CPPFLAGS := \
 	-nostdinc \
 	-I src \
@@ -50,8 +58,9 @@ LDFLAGS := \
 	-Wl,-T,linker-scripts/x86_64.lds \
 	-Wl,--build-id=none \
 
-SRC := $(shell find src -type f -name '*.c' | LC_ALL=C sort)
-OBJ := $(patsubst %.c,obj/%.o,$(SRC))
+C_SRC := $(shell find src -type f -name '*.c' | LC_ALL=C sort)
+ASM_SRC := $(shell find src -type f -name '*.S' | LC_ALL=C sort)
+OBJ := $(patsubst %.c,obj/%.o,$(C_SRC)) $(patsubst %.S,obj/%.o,$(ASM_SRC))
 DEPS := $(OBJ:.o=.d)
 HOST_TEST := obj-host/test_boot_josh
 
@@ -67,6 +76,10 @@ bin/$(OUTPUT): $(OBJ) linker-scripts/x86_64.lds
 obj/%.o: %.c
 	mkdir -p $(dir $@)
 	$(CC) $(CFLAGS) $(CPPFLAGS) -c $< -o $@
+
+obj/%.o: %.S
+	mkdir -p $(dir $@)
+	$(CC) $(ASFLAGS) $(CPPFLAGS) -c $< -o $@
 
 $(HOST_TEST): tests/test_boot_josh.c src/boot_josh.c src/boot.h src/boot_internal.h src/josh_boot_protocol.h
 	mkdir -p $(dir $@)
