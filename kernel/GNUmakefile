@@ -58,11 +58,31 @@ LDFLAGS := \
 	-Wl,-T,linker-scripts/x86_64.lds \
 	-Wl,--build-id=none \
 
+USER_ASFLAGS := \
+	-target x86_64-unknown-none-elf \
+	-g \
+	-m64 \
+	-march=x86-64 \
+	-mno-red-zone
+
+USER_LDFLAGS := \
+	-target x86_64-unknown-none-elf \
+	-fuse-ld=lld \
+	-nostdlib \
+	-static \
+	-Wl,-m,elf_x86_64 \
+	-Wl,-z,max-page-size=0x1000 \
+	-Wl,-z,noexecstack \
+	-Wl,-T,user/linker.ld \
+	-Wl,--build-id=none
+
 C_SRC := $(shell find src -type f -name '*.c' | LC_ALL=C sort)
 ASM_SRC := $(shell find src -type f -name '*.S' | LC_ALL=C sort)
 OBJ := $(patsubst %.c,obj/%.o,$(C_SRC)) $(patsubst %.S,obj/%.o,$(ASM_SRC))
 DEPS := $(OBJ:.o=.d)
-HOST_TEST := obj-host/test_boot_josh
+HOST_BOOT_TEST := obj-host/test_boot_josh
+HOST_ELF_TEST := obj-host/test_elf64
+USER_ELF := user/bin/init.elf
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -81,15 +101,30 @@ obj/%.o: %.S
 	mkdir -p $(dir $@)
 	$(CC) $(ASFLAGS) $(CPPFLAGS) -c $< -o $@
 
-$(HOST_TEST): tests/test_boot_josh.c src/boot_josh.c src/boot.h src/boot_internal.h src/josh_boot_protocol.h
+obj/src/user_init_blob.o: $(USER_ELF)
+
+user/obj/init.o: user/init.S src/syscall_abi.h
+	mkdir -p $(dir $@)
+	$(CC) $(USER_ASFLAGS) -c $< -o $@
+
+$(USER_ELF): user/obj/init.o user/linker.ld
+	mkdir -p $(dir $@)
+	$(CC) $(USER_LDFLAGS) user/obj/init.o -o $@
+
+$(HOST_BOOT_TEST): tests/test_boot_josh.c src/boot_josh.c src/boot.h src/boot_internal.h src/josh_boot_protocol.h
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_boot_josh.c src/boot_josh.c -o $@
 
-host-tests: $(HOST_TEST)
-	$(HOST_TEST)
+$(HOST_ELF_TEST): tests/test_elf64.c src/elf64.c src/elf64.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_elf64.c src/elf64.c -o $@
+
+host-tests: $(HOST_BOOT_TEST) $(HOST_ELF_TEST)
+	$(HOST_BOOT_TEST)
+	$(HOST_ELF_TEST)
 
 clean:
-	rm -rf bin obj obj-host
+	rm -rf bin obj obj-host user/bin user/obj
 
 distclean: clean
 	rm -rf .deps-obtained freestanding-c-hdrs limine-protocol
