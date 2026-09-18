@@ -20,6 +20,8 @@ typedef struct {
 typedef struct {
     boot_framebuffer_t framebuffer;
     uint64_t usable_memory_mib;
+    uint64_t rsdp_phys;
+    uint64_t smbios_phys;
 } boot_context_t;
 
 typedef enum {
