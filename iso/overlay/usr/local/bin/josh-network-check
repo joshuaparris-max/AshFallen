@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+set -u
+
+failures=0
+
+pass() { printf 'PASS  %s\n' "$*"; }
+warn() { printf 'WARN  %s\n' "$*"; }
+fail() { printf 'FAIL  %s\n' "$*"; failures=$((failures + 1)); }
+
+if systemctl is-active --quiet NetworkManager; then
+  pass "NetworkManager is active"
+else
+  fail "NetworkManager is not active"
+fi
+
+if systemctl is-active --quiet systemd-resolved; then
+  pass "systemd-resolved is active"
+else
+  fail "systemd-resolved is not active"
+fi
+
+if systemctl is-active --quiet systemd-timesyncd; then
+  pass "systemd-timesyncd is active"
+else
+  fail "systemd-timesyncd is not active"
+fi
+
+if nmcli -t -f STATE general 2>/dev/null | grep -Eq '^(connected|connected \(site only\)|connecting)$'; then
+  pass "NetworkManager reports a usable connection state"
+else
+  fail "NetworkManager does not report a usable connection"
+fi
+
+if ip -4 route show default | grep -q .; then
+  pass "IPv4 default route is present"
+else
+  fail "IPv4 default route is missing"
+fi
+
+if ip -6 route show default | grep -q .; then
+  pass "IPv6 default route is present"
+else
+  warn "No IPv6 default route from the current network (IPv6 remains enabled)"
+fi
+
+if resolvectl query www.youtube.com >/tmp/josh-os-dns-check.log 2>&1; then
+  pass "DNS resolves www.youtube.com"
+else
+  fail "DNS could not resolve www.youtube.com"
+fi
+
+if [[ "$(timedatectl show -p NTPSynchronized --value 2>/dev/null)" == "yes" ]]; then
+  pass "System clock is NTP-synchronised"
+else
+  fail "System clock is not yet NTP-synchronised"
+fi
+
+if [[ -s /etc/ssl/certs/ca-certificates.crt ]]; then
+  pass "System CA certificate bundle is installed"
+else
+  fail "System CA certificate bundle is missing"
+fi
+
+http_code="$(
+  curl --silent --show-error --location     --connect-timeout 10 --max-time 20     --output /dev/null --write-out '%{http_code}'     https://www.youtube.com/ 2>/tmp/josh-os-youtube-curl.log
+)" || http_code="000"
+
+if [[ "$http_code" != "000" ]]; then
+  pass "HTTPS/TCP/TLS reached https://www.youtube.com/ (HTTP $http_code)"
+else
+  fail "HTTPS/TCP/TLS could not reach https://www.youtube.com/"
+fi
+
+printf '\nNetworkManager device summary:\n'
+nmcli -f DEVICE,TYPE,STATE,CONNECTION device status 2>/dev/null || true
+
+printf '\nAddress summary:\n'
+ip -brief address 2>/dev/null || true
+
+if (( failures > 0 )); then
+  printf '\nJosh OS internet readiness: FAIL (%d check(s))\n' "$failures"
+  exit 1
+fi
+
+printf '\nJosh OS internet readiness: PASS\n'
