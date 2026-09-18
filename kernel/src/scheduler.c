@@ -117,6 +117,14 @@ int scheduler_run_userspace(const boot_context_t *boot) {
     }
 
     serial_write("JOSHOS_PROCESSES_READY\n");
+    if (processes[0].cr3_phys == 0 || processes[1].cr3_phys == 0 ||
+        (processes[0].cr3_phys & UINT64_C(0xfff)) != 0 ||
+        (processes[1].cr3_phys & UINT64_C(0xfff)) != 0 ||
+        processes[0].cr3_phys == processes[1].cr3_phys) {
+        serial_write("JOSHOS_ERROR_PROCESS_ADDRESS_SPACES\n");
+        return 0;
+    }
+    serial_write("JOSHOS_ADDRESS_SPACES_OK\n");
     current_index = 0;
     processes[0].state = PROCESS_RUNNING;
     gdt_set_rsp0(processes[0].kernel_stack_top);
