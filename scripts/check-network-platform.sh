@@ -31,6 +31,7 @@ required_files=(
   "$root/etc/systemd/resolved.conf.d/10-josh-os.conf"
   "$root/usr/local/bin/josh-network-check"
   "$root/usr/local/bin/josh-wifi"
+  "$root/usr/local/bin/josh-network-acceptance"
   "$root/usr/local/lib/josh-os/network-control.py"
   "$root/usr/lib/systemd/system/josh-network-control.service"
   "$root/etc/NetworkManager/conf.d/20-josh-resilience.conf"
