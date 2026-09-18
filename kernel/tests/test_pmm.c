@@ -52,6 +52,18 @@ int main(void) {
     expect("misaligned free rejected", pmm_free_frame(first + 1) == PMM_INVALID_FREE);
     expect("outside free rejected", pmm_free_frame(0) == PMM_INVALID_FREE);
 
+    uint64_t before_run = pmm_stats().free_frames;
+    uint64_t run = pmm_alloc_frames(16);
+    expect("contiguous run allocated", run != UINT64_MAX);
+    expect("contiguous run aligned", (run & (PMM_PAGE_SIZE - 1u)) == 0);
+    expect("contiguous run accounting",
+           pmm_stats().free_frames == before_run - 16u);
+    expect("contiguous run free", pmm_free_frames(run, 16) == PMM_OK);
+    expect("contiguous run restored",
+           pmm_stats().free_frames == before_run);
+    expect("contiguous run double free",
+           pmm_free_frames(run, 16) == PMM_DOUBLE_FREE);
+
     expect("4096-frame stress", pmm_self_test(4096));
     pmm_stats_t after = pmm_stats();
     expect("free count restored", after.free_frames == initial.free_frames);
