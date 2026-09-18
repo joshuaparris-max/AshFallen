@@ -44,8 +44,8 @@ The same kernel binary or source tree can boot through both supported adapters a
 
 Implement:
 
-- [ ] GDT owned by the kernel;
-- [ ] TSS;
+- [x] GDT owned by the kernel;
+- [x] TSS;
 - [x] IDT;
 - [x] exception stubs;
 - [x] page-fault handler;
@@ -55,7 +55,7 @@ Implement:
 - [ ] stack trace groundwork where feasible;
 - [ ] graphical + serial panic path.
 
-The current slice installs kernel-owned exception gates for vectors 0–31 and reports the vector, error code, RIP, CS and RFLAGS over serial. Page faults also report CR2. The IDT intentionally reuses the code selector supplied by the current Limine environment; a Josh-owned GDT, TSS/IST and graphical panic path are still outstanding.
+The kernel now installs its own 64-bit GDT and TSS before loading the IDT. TSS IST1 points at a dedicated 16 KiB emergency stack and exception vector 8 selects that IST for double-fault entry. Exception gates for vectors 0–31 report the vector, error code, RIP, CS and RFLAGS over serial; page faults also report CR2. A deliberate double-fault test and graphical panic path are still outstanding, so the double-fault strategy is not yet marked complete.
 
 ### Test cases
 

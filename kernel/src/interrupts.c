@@ -1,4 +1,5 @@
 #include "interrupts.h"
+#include "gdt.h"
 #include "serial.h"
 #include <stdint.h>
 
@@ -41,11 +42,11 @@ static uint16_t current_code_selector(void) {
     return selector;
 }
 
-static void idt_set_gate(uint8_t vector, uintptr_t handler, uint16_t selector) {
+static void idt_set_gate(uint8_t vector, uintptr_t handler, uint16_t selector, uint8_t ist) {
     idt_entry_t *entry = &idt[vector];
     entry->offset_low = (uint16_t)(handler & 0xFFFFu);
     entry->selector = selector;
-    entry->ist = 0;
+    entry->ist = ist & 0x07u;
     entry->type_attr = IDT_GATE_INTERRUPT;
     entry->offset_mid = (uint16_t)((handler >> 16) & 0xFFFFu);
     entry->offset_high = (uint32_t)((handler >> 32) & 0xFFFFFFFFu);
@@ -148,7 +149,8 @@ void interrupts_init(void) {
 
     uint16_t selector = current_code_selector();
     for (uint8_t vector = 0; vector < 32; ++vector) {
-        idt_set_gate(vector, exception_handlers[vector], selector);
+        uint8_t ist = vector == 8 ? GDT_DOUBLE_FAULT_IST_INDEX : 0;
+        idt_set_gate(vector, exception_handlers[vector], selector, ist);
     }
 
     idtr_t idtr = {

@@ -51,6 +51,8 @@ run: $(IMAGE).iso
 smoke: $(IMAGE).iso
 	rm -f boot.log
 	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(IMAGE).iso -display none -serial stdio -no-reboot > boot.log 2>&1
+	grep -q JOSHOS_GDT_TSS_OK boot.log
+	grep -q JOSHOS_IDT_OK boot.log
 	grep -q JOSHOS_BOOT_OK boot.log
 	@echo "Josh OS boot smoke test passed."
 
@@ -59,6 +61,8 @@ fault-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
 	$(MAKE) IMAGE=$(FAULT_IMAGE) EXTRA_CPPFLAGS=-DJOSHOS_FAULT_TEST_UD2 $(FAULT_IMAGE).iso
 	rm -f fault-boot.log
 	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(FAULT_IMAGE).iso -display none -serial stdio -no-reboot > fault-boot.log 2>&1
+	grep -q JOSHOS_GDT_TSS_OK fault-boot.log
+	grep -q JOSHOS_IDT_OK fault-boot.log
 	grep -q JOSHOS_FAULT_TEST_UD2 fault-boot.log
 	grep -q 'VECTOR=0x0000000000000006' fault-boot.log
 	grep -q JOSHOS_PANIC_HALT fault-boot.log

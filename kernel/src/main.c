@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include "boot.h"
 #include "desktop.h"
+#include "gdt.h"
 #include "gfx.h"
 #include "interrupts.h"
 #include "keyboard.h"
@@ -38,6 +39,12 @@ static void report_boot_error(boot_status_t status) {
 void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_payload) {
     serial_init();
     serial_write("JOSHOS_KERNEL_ENTERED\n");
+
+    if (!gdt_init()) {
+        serial_write("JOSHOS_ERROR_GDT_TSS_INIT\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_GDT_TSS_OK\n");
 
     interrupts_init();
     serial_write("JOSHOS_IDT_OK\n");
