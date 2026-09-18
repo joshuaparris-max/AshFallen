@@ -5,6 +5,7 @@
 #include "gfx.h"
 #include "interrupts.h"
 #include "keyboard.h"
+#include "heap.h"
 #include "pmm.h"
 #include "paging.h"
 #include "serial.h"
@@ -160,6 +161,20 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
         halt_forever();
     }
     serial_write("JOSHOS_PAGING_OK\n");
+
+    heap_status_t heap_status = heap_init();
+    if (heap_status != HEAP_OK) {
+        serial_write("JOSHOS_ERROR_HEAP_INIT\n");
+        serial_write(heap_status_string(heap_status));
+        serial_write("\n");
+        halt_forever();
+    }
+
+    if (!heap_self_test()) {
+        serial_write("JOSHOS_ERROR_HEAP_STRESS\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_HEAP_OK\n");
 
     gfx_init(&boot.framebuffer);
     desktop_layout_t layout = desktop_draw();
