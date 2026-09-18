@@ -7,7 +7,7 @@ static char translate(uint8_t code, int shifted) {
         'a','s','d','f','g','h','j','k','l',';', '\'', '`',0,'\\',
         'z','x','c','v','b','n','m',',','.','/',0,'*',0,' '
     };
-    static const char shifted[58] = {
+    static const char shifted_map[58] = {
         0, 27, '!','@','#','$','%','^','&','*','(',')','_','+', '\b','\t',
         'Q','W','E','R','T','Y','U','I','O','P','{','}','\n',0,
         'A','S','D','F','G','H','J','K','L',':','"','~',0,'|',
@@ -15,7 +15,7 @@ static char translate(uint8_t code, int shifted) {
     };
 
     if (code >= 58) return 0;
-    return shifted ? shifted[code] : normal[code];
+    return shifted ? shifted_map[code] : normal[code];
 }
 
 void keyboard_decode_reset(keyboard_decode_state_t *state) {
