@@ -20,9 +20,9 @@ The kernel already boots through Limine, receives a framebuffer and memory map, 
 
 ### Goals
 
-- [ ] Introduce a boot-adapter layer instead of reading Limine request structures throughout kernel code.
+- [x] Introduce a boot-adapter layer instead of reading Limine request structures throughout kernel code.
 - [ ] Define an internal `josh_boot_info` representation.
-- [ ] Validate framebuffer geometry and address arithmetic.
+- [x] Validate framebuffer geometry and address arithmetic.
 - [ ] Validate/sanitise memory-map entries.
 - [ ] Preserve raw boot-protocol metadata for debug builds.
 - [ ] Add support for Josh Boot Protocol alongside Limine.
