@@ -2,7 +2,7 @@
 
 This document defines the direction for the future contract between JoshBootloader and the canonical Josh kernel.
 
-It is a roadmap and design boundary, not yet a frozen binary ABI.
+It is still an experimental, unfrozen ABI, but Josh Boot Protocol v0 is now exercised end-to-end by the legacy-BIOS JoshBootloader path in QEMU.
 
 ## Why this exists
 
@@ -176,18 +176,19 @@ Add host tests for validation and malformed structures.
 
 Freeze Josh Boot Protocol v0 enough for an experimental JoshBootloader path.
 
-### Step 5
+### Step 5 — implemented and integration-tested
 
-Teach JoshBootloader to load the canonical ELF64 kernel and construct the structure.
+JoshBootloader now discovers an MBR/FAT32 boot partition, loads the canonical kernel from `/BOOT/JOSH/KERNEL.ELF`, validates/loads ELF64 segments and constructs the experimental Josh Boot Protocol v0 hand-off.
 
-### Step 6
+### Step 6 — partially complete
 
-Boot the same kernel in QEMU through:
+The same kernel now boots in QEMU through:
 
 - Limine BIOS;
 - Limine UEFI;
-- JoshBootloader legacy BIOS path;
-- later JoshBootloader UEFI path.
+- JoshBootloader legacy BIOS path.
+
+JoshBootloader UEFI kernel loading remains future work.
 
 ### Step 7
 
