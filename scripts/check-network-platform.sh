@@ -33,8 +33,6 @@ required_files=(
   "$root/usr/local/bin/josh-wifi"
   "$root/usr/local/lib/josh-os/network-control.py"
   "$root/usr/lib/systemd/system/josh-network-control.service"
-  "$root/usr/local/lib/josh-os/network-ready-probe"
-  "$root/usr/lib/systemd/system/josh-network-ready.service"
   "$root/etc/NetworkManager/conf.d/20-josh-resilience.conf"
 )
 
@@ -55,7 +53,6 @@ declare -A required_links=(
   ["$root/etc/systemd/system/multi-user.target.wants/NetworkManager.service"]="/usr/lib/systemd/system/NetworkManager.service"
   ["$root/etc/systemd/system/network-online.target.wants/NetworkManager-wait-online.service"]="/usr/lib/systemd/system/NetworkManager-wait-online.service"
   ["$root/etc/systemd/system/multi-user.target.wants/josh-network-control.service"]="/usr/lib/systemd/system/josh-network-control.service"
-  ["$root/etc/systemd/system/multi-user.target.wants/josh-network-ready.service"]="/usr/lib/systemd/system/josh-network-ready.service"
   ["$root/etc/systemd/system/multi-user.target.wants/systemd-resolved.service"]="/usr/lib/systemd/system/systemd-resolved.service"
   ["$root/etc/systemd/system/multi-user.target.wants/systemd-timesyncd.service"]="/usr/lib/systemd/system/systemd-timesyncd.service"
   ["$root/etc/resolv.conf"]="/run/systemd/resolve/stub-resolv.conf"
