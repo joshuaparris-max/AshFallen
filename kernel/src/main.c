@@ -5,6 +5,7 @@
 #include "gfx.h"
 #include "interrupts.h"
 #include "keyboard.h"
+#include "pmm.h"
 #include "serial.h"
 #include "shell.h"
 
@@ -28,6 +29,9 @@ static void report_boot_error(boot_status_t status) {
             break;
         case BOOT_UNSUPPORTED_FRAMEBUFFER:
             serial_write("JOSHOS_ERROR_UNSUPPORTED_FRAMEBUFFER\n");
+            break;
+        case BOOT_NO_PHYSICAL_MAP:
+            serial_write("JOSHOS_ERROR_NO_PHYSICAL_MAP\n");
             break;
         case BOOT_OK:
         default:
@@ -131,6 +135,21 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
     if (boot.smbios_phys != 0) {
         serial_write("JOSHOS_SMBIOS_OK\n");
     }
+
+    pmm_status_t pmm_status = pmm_init(&boot);
+    if (pmm_status != PMM_OK) {
+        serial_write("JOSHOS_ERROR_PMM_INIT\n");
+        serial_write(pmm_status_string(pmm_status));
+        serial_write("\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_PMM_OK\n");
+
+    if (!pmm_self_test(4096)) {
+        serial_write("JOSHOS_ERROR_PMM_STRESS\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_PMM_STRESS_OK\n");
 
     gfx_init(&boot.framebuffer);
     desktop_layout_t layout = desktop_draw();

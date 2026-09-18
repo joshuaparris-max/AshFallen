@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #define BOOT_MEMORY_MAX_ENTRIES 128u
+#define BOOT_PHYSICAL_UNLIMITED UINT64_MAX
 
 typedef enum {
     BOOT_MEMORY_RESERVED = 0,
@@ -40,6 +41,20 @@ typedef struct {
     boot_memory_region_t memory_map[BOOT_MEMORY_MAX_ENTRIES];
     uint32_t memory_map_count;
     uint64_t usable_memory_mib;
+
+    /*
+     * Boot-time physical-memory access contract. physical address P is
+     * accessible at physical_memory_offset + P while P is below the limit.
+     * The kernel replaces this with its own mapping during paging init.
+     */
+    uint64_t physical_memory_offset;
+    uint64_t physical_memory_limit;
+
+    uint64_t kernel_phys_start;
+    uint64_t kernel_phys_end;
+    uint64_t kernel_virt_start;
+    uint64_t kernel_virt_end;
+
     uint64_t rsdp_phys;
     uint64_t smbios_phys;
 } boot_context_t;
@@ -50,7 +65,8 @@ typedef enum {
     BOOT_INVALID_BOOT_INFO,
     BOOT_NO_MEMORY_MAP,
     BOOT_NO_FRAMEBUFFER,
-    BOOT_UNSUPPORTED_FRAMEBUFFER
+    BOOT_UNSUPPORTED_FRAMEBUFFER,
+    BOOT_NO_PHYSICAL_MAP
 } boot_status_t;
 
 boot_status_t boot_context_init(boot_context_t *context,

@@ -72,6 +72,11 @@ int main(void) {
     expect("framebuffer copied", (uintptr_t)context.framebuffer.address == 0xe0000000u);
     expect("RSDP copied", context.rsdp_phys == UINT64_C(0x000f0000));
     expect("SMBIOS copied", context.smbios_phys == UINT64_C(0x000f1000));
+    expect("Josh identity physical map", context.physical_memory_offset == 0);
+    expect("Josh physical map limit", context.physical_memory_limit == UINT64_C(0x100000000));
+    expect("kernel physical bounds",
+           context.kernel_phys_start == UINT64_C(0x200000) &&
+           context.kernel_phys_end == UINT64_C(0x210000));
 
     valid_info(&info, entries, framebuffer);
     info.magic ^= 1;
