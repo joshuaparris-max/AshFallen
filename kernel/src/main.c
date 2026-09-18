@@ -54,6 +54,20 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
     __asm__ volatile ("ud2");
 #endif
 
+#ifdef JOSHOS_FAULT_TEST_DOUBLE_FAULT
+    serial_write("JOSHOS_FAULT_TEST_DOUBLE_FAULT\n");
+    interrupts_arm_double_fault_test();
+    __asm__ volatile (
+        "movw $0xffff, %%ax\n\t"
+        "movw %%ax, %%ds"
+        :
+        :
+        : "rax", "memory"
+    );
+    serial_write("JOSHOS_ERROR_DOUBLE_FAULT_TEST_RETURNED\n");
+    halt_forever();
+#endif
+
     boot_context_t boot;
     boot_status_t status = boot_context_init(&boot, loader_magic1, loader_magic2, loader_payload);
     if (status != BOOT_OK) {
