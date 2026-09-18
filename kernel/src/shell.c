@@ -26,7 +26,7 @@ static int equals(const char *a, const char *b) {
 
 static int starts_with(const char *text, const char *prefix) {
     while (*prefix) {
-        if (lower(*text++) != lower(*prefix++)) return 0;
+        if (!*text || lower(*text++) != lower(*prefix++)) return 0;
     }
     return 1;
 }
