@@ -137,6 +137,7 @@ while IFS= read -r -d '' cfg; do
   sed -i     -e 's/Arch Linux install medium/Josh OS live/g'     -e 's/Arch Linux/Josh OS/g'     "$cfg"
 done < <(find "$GENERATED_PROFILE" -type f \( -name '*.cfg' -o -name '*.conf' \) -print0)
 
+bash "$ROOT/scripts/check-network-platform.sh" "$GENERATED_PROFILE"
 bash "$ROOT/scripts/check-product-browser.sh" "$GENERATED_PROFILE"
 
 if [[ "$PREPARE_ONLY" -eq 1 ]]; then
