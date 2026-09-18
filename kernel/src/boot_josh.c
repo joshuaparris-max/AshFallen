@@ -96,6 +96,29 @@ static boot_status_t copy_memory_map(
     return BOOT_OK;
 }
 
+static boot_status_t copy_command_line(
+    boot_context_t *context,
+    const JoshBootInfo *info
+) {
+    context->command_line[0] = '\0';
+    if ((info->flags & JOSH_BOOT_FLAG_CMDLINE) == 0) return BOOT_OK;
+
+    if (info->command_line_address == 0 ||
+        info->command_line_length == 0 ||
+        info->command_line_length > BOOT_COMMAND_LINE_MAX) {
+        return BOOT_INVALID_BOOT_INFO;
+    }
+
+    const char *source = (const char *)(uintptr_t)info->command_line_address;
+    for (uint32_t i = 0; i < info->command_line_length; ++i) {
+        unsigned char c = (unsigned char)source[i];
+        if (c < 0x20u || c > 0x7eu) return BOOT_INVALID_BOOT_INFO;
+        context->command_line[i] = (char)c;
+    }
+    context->command_line[info->command_line_length] = '\0';
+    return BOOT_OK;
+}
+
 boot_status_t boot_josh_context_init(boot_context_t *context, const JoshBootInfo *info) {
     if (!context || !info) return BOOT_INVALID_BOOT_INFO;
     if (info->magic != JOSH_BOOT_INFO_MAGIC || info->abi_major != JOSH_BOOT_ABI_MAJOR ||
@@ -121,6 +144,9 @@ boot_status_t boot_josh_context_init(boot_context_t *context, const JoshBootInfo
     if ((info->flags & JOSH_BOOT_FLAG_SMBIOS) != 0 && info->smbios_phys == 0) {
         return BOOT_INVALID_BOOT_INFO;
     }
+
+    status = copy_command_line(context, info);
+    if (status != BOOT_OK) return status;
 
     context->framebuffer.address = (void *)(uintptr_t)info->framebuffer.address;
     context->framebuffer.width = info->framebuffer.width;
