@@ -57,7 +57,7 @@ jobs:
                 WLR_HEADLESS_OUTPUTS=1 \
                 WLR_RENDERER=pixman \
                 ./compositor/josh-compositor \
-                  -s "wayland-info; echo JOSH_WAYLAND_INFO_OK" \
+                  -s "wayland-info; ./compositor/test-xdg-client; echo JOSH_WAYLAND_CLIENT_DONE" \
                 > compositor-headless.log 2>&1
               rc=$?
               set -e
@@ -71,8 +71,10 @@ jobs:
               cat compositor-headless.log
               grep -q "JOSH_COMPOSITOR_READY" compositor-headless.log
               grep -q "JOSH_COMPOSITOR_OUTPUT" compositor-headless.log
-              grep -q "JOSH_WAYLAND_INFO_OK" compositor-headless.log
               grep -q "interface: .xdg_wm_base." compositor-headless.log
+              grep -q "JOSH_XDG_TEST_MAPPED" compositor-headless.log
+              grep -q "JOSH_COMPOSITOR_VIEW_MAPPED" compositor-headless.log
+              grep -q "JOSH_WAYLAND_CLIENT_DONE" compositor-headless.log
 
-              echo "Josh compositor headless Wayland protocol smoke test passed."
+              echo "Josh compositor headless XDG window smoke test passed."
             '
