@@ -8,34 +8,52 @@ The long-term aim is a coherent system that combines the openness of Linux, the 
 
 ## Two complementary tracks
 
-Josh OS now deliberately has two development tracks:
+Josh OS deliberately has two development tracks.
 
-**Product track:** build a beautiful, practical Josh desktop on top of the Linux kernel initially, so it can benefit from mature drivers and run on real modern hardware.
+### Product track — the usable desktop
 
-**Research track:** continue the independent Josh kernel in this repository, progressively implementing memory, interrupts, processes, filesystems, drivers, networking and eventually the same Josh desktop stack natively.
+The product track builds a beautiful, practical Josh desktop on top of the Linux kernel initially so it can benefit from mature drivers and run on modern hardware.
 
-The intention is convergence, not two permanent operating systems. Shared concepts such as apps, windows, settings, files, notifications and capabilities should remain implementation-independent.
+It now includes:
 
-See [docs/PRODUCT_STRATEGY.md](docs/PRODUCT_STRATEGY.md) for the full plan.
+- a browser-based Josh Window System prototype;
+- movable/resizable/minimisable/maximisable windows;
+- edge snapping;
+- dock and menu bar;
+- notifications;
+- light/dark themes, accents and wallpapers;
+- About, Files, Terminal, Text Editor and Settings apps;
+- a shared design-token system;
+- an ArchISO pipeline that boots the Josh desktop full-screen in Chromium kiosk mode.
 
-## What exists today
+GitHub Actions builds this as the **JoshOS-Stage0-Live-x86_64** artifact.
 
-The native kernel already:
+### Native-kernel track — the independent OS
 
-- boots independently on x86-64 through Limine;
+The independent Josh kernel already:
+
+- boots on x86-64 through Limine;
 - produces a hybrid BIOS/UEFI ISO suitable for QEMU and Ventoy;
 - discovers the framebuffer and memory map;
-- renders a graphical Josh OS desktop directly;
+- renders directly to the framebuffer;
 - accepts basic PS/2 keyboard input;
-- exposes a tiny graphical shell;
+- exposes a small graphical shell;
 - emits serial diagnostics;
-- is built and actually booted by GitHub Actions in QEMU.
+- is actually booted by GitHub Actions in QEMU.
 
-The shell currently supports commands including `help`, `about`, `mem`, `clear`, `echo` and `reboot`.
+GitHub Actions builds this as **JoshOS-0.1-x86_64.iso**.
 
-This is genuinely native code: there is no Linux kernel underneath the current kernel build.
+There is no Linux kernel underneath the native-kernel build.
 
-## Build the native kernel
+## Which ISO should I use?
+
+**Want to see the desktop/window experience?** Use the **Stage 0 product ISO**. It boots Linux/ArchISO underneath, autologs into a minimal session and launches the Josh desktop full-screen.
+
+**Want to boot the actual Josh kernel?** Use **JoshOS-0.1-x86_64.iso**. It is much more primitive visually, but the kernel and framebuffer code are ours.
+
+Both can be tested in a VM. The native ISO is also intended for Ventoy testing on suitable x86-64 hardware.
+
+## Build the native-kernel ISO
 
 On Ubuntu/Debian:
 
@@ -44,27 +62,72 @@ sudo apt install clang lld make xorriso curl git qemu-system-x86
 make
 ```
 
-The output is:
+Output:
 
 ```text
 JoshOS-0.1-x86_64.iso
 ```
 
-Run it with:
+Run:
 
 ```sh
 make run
 ```
 
-Or copy the ISO to a Ventoy USB and boot it from Ventoy.
+## Build the Stage 0 product ISO
+
+On Arch Linux:
+
+```sh
+sudo pacman -S archiso
+sudo bash ./scripts/build-iso.sh
+```
+
+Output is written to:
+
+```text
+out/josh-os-*.iso
+```
+
+The GitHub Actions workflow **Build Josh OS Product ISO** performs this build automatically and uploads the ISO with its SHA-256 checksum.
+
+## Architecture direction
+
+The tracks are intended to converge, not remain separate forever.
+
+```text
+Josh apps
+   ↓
+Josh application APIs
+   ↓
+Josh desktop / compositor
+   ↓
+Josh services
+   ↓
+Linux kernel initially
+   ↓
+hardware
+
+          while in parallel
+
+Josh kernel
+   ↓
+memory / interrupts / processes
+   ↓
+filesystems / drivers / networking
+   ↓
+eventual Josh userspace + desktop
+```
+
+Shared concepts such as App, Window, Surface, Setting, Notification and Capability should remain implementation-independent so the desktop does not need to be reinvented during convergence.
 
 ## Current limitations
 
 Josh OS is pre-alpha.
 
-The native desktop is currently direct framebuffer rendering, not yet a real compositor. The window and dock are visual structures rather than independently managed surfaces. Keyboard support is intentionally tiny and PS/2-oriented. There is not yet a USB HID stack, mouse driver, scheduler, userspace, filesystem, networking, audio stack or accelerated GPU driver.
+The native desktop is not yet a compositor and lacks mouse/USB, processes, userspace, filesystem, networking, audio and accelerated graphics.
 
-These are explicit roadmap items rather than hidden dependencies.
+The Stage 0 product ISO is intentionally a compatibility vehicle: ArchISO + LightDM + Openbox + Chromium host the prototype. It is not the final Wayland architecture.
 
 ## Documentation
 
@@ -72,3 +135,8 @@ These are explicit roadmap items rather than hidden dependencies.
 - [Architecture](docs/ARCHITECTURE.md)
 - [Product and architecture strategy](docs/PRODUCT_STRATEGY.md)
 - [Desktop prototype vs native kernel](docs/DESKTOP_PROTOTYPE_COMPARISON.md)
+- [Product-track architecture](docs/product/ARCHITECTURE.md)
+- [Product-track roadmap](docs/product/ROADMAP.md)
+- [Design principles](docs/DESIGN_PRINCIPLES.md)
+- [VirtualBox product ISO test](docs/VIRTUALBOX.md)
+- [Architecture decisions](docs/decisions/)
