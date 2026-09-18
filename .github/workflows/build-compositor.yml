@@ -44,7 +44,7 @@ jobs:
                 wayland-protocols \
                 wayland-utils \
                 wlroots0.20 \
-                xkbcommon
+                libxkbcommon
 
               make -C compositor clean test compositor
 
