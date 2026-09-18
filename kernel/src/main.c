@@ -10,6 +10,7 @@
 #include "net.h"
 #include "pmm.h"
 #include "paging.h"
+#include "pci.h"
 #include "serial.h"
 #include "scheduler.h"
 #include "shell.h"
@@ -55,6 +56,13 @@ static __attribute__((noreturn)) void kernel_after_paging(void) {
         halt_forever();
     }
     serial_write("JOSHOS_HEAP_SELF_TEST_OK\n");
+
+    pci_init();
+    if (pci_device_count() == 0) {
+        serial_write("JOSHOS_ERROR_PCI_ENUMERATION\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_PCI_OK\n");
 
     if (!net_self_test()) {
         serial_write("JOSHOS_ERROR_NET_LOOPBACK\n");
