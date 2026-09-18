@@ -2,7 +2,8 @@
 .DELETE_ON_ERROR:
 
 IMAGE := JoshOS-0.1-x86_64
-FAULT_IMAGE := JoshOS-fault-test-x86_64\nDOUBLE_FAULT_IMAGE := JoshOS-double-fault-test-x86_64
+FAULT_IMAGE := JoshOS-fault-test-x86_64
+DOUBLE_FAULT_IMAGE := JoshOS-double-fault-test-x86_64
 LIMINE_VERSION := 12.9.0
 LIMINE_SHA256 := 84059c93b4ea03994af6d614654c7095291388850ea7b258d64f9263abde5557
 LIMINE_URL := https://github.com/Limine-Bootloader/Limine/releases/download/v$(LIMINE_VERSION)/limine-binary.tar.gz
