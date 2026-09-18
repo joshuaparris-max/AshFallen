@@ -1,0 +1,67 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+usage() {
+  cat <<'EOF'
+Usage:
+  josh-wifi status
+  josh-wifi list
+  josh-wifi connect <ssid>
+  josh-wifi disconnect
+  josh-wifi on
+  josh-wifi off
+
+"connect" deliberately uses nmcli --ask so Wi-Fi passwords are not placed on
+the command line or stored in shell history.
+EOF
+}
+
+wifi_device() {
+  nmcli -t -f DEVICE,TYPE device status | awk -F: '$2 == "wifi" { print $1; exit }'
+}
+
+command -v nmcli >/dev/null 2>&1 || {
+  echo "josh-wifi: NetworkManager/nmcli is not installed" >&2
+  exit 1
+}
+
+action="${1:-status}"
+case "$action" in
+  status)
+    nmcli radio wifi
+    nmcli -f DEVICE,TYPE,STATE,CONNECTION device status
+    ;;
+  list)
+    device="$(wifi_device)"
+    [[ -n "$device" ]] || { echo "josh-wifi: no Wi-Fi adapter detected" >&2; exit 2; }
+    nmcli device wifi rescan ifname "$device" >/dev/null 2>&1 || true
+    nmcli -f IN-USE,SSID,SECURITY,SIGNAL,BARS device wifi list ifname "$device"
+    ;;
+  connect)
+    [[ $# -ge 2 ]] || { usage >&2; exit 2; }
+    device="$(wifi_device)"
+    [[ -n "$device" ]] || { echo "josh-wifi: no Wi-Fi adapter detected" >&2; exit 2; }
+    shift
+    ssid="$*"
+    nmcli radio wifi on
+    nmcli --ask device wifi connect "$ssid" ifname "$device"
+    ;;
+  disconnect)
+    device="$(wifi_device)"
+    [[ -n "$device" ]] || { echo "josh-wifi: no Wi-Fi adapter detected" >&2; exit 2; }
+    nmcli device disconnect "$device"
+    ;;
+  on)
+    nmcli radio wifi on
+    ;;
+  off)
+    nmcli radio wifi off
+    ;;
+  -h|--help|help)
+    usage
+    ;;
+  *)
+    usage >&2
+    exit 2
+    ;;
+esac
