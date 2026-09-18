@@ -9,7 +9,7 @@ Josh OS is one system being developed from both ends:
 
 A practical Linux-backed product track will sit between those ends while native kernel capability grows.
 
-See [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md) for the convergence plan and [DESKTOP_PROTOTYPE_COMPARISON.md](DESKTOP_PROTOTYPE_COMPARISON.md) for the lessons taken from the early desktop prototype.
+See [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md) for the convergence plan, [BOOT_STACK.md](BOOT_STACK.md) for the power-button-to-desktop contract, and [DESKTOP_PROTOTYPE_COMPARISON.md](DESKTOP_PROTOTYPE_COMPARISON.md) for the lessons taken from the early desktop prototype.
 
 ## Native v0.1 boot path
 
@@ -17,22 +17,27 @@ See [PRODUCT_STRATEGY.md](PRODUCT_STRATEGY.md) for the convergence plan and [DES
         ↓
     Limine 12.9
         ↓
-    Josh kernel ELF64
+    boot_limine.c adapter
         ↓
-    Framebuffer + memory-map discovery
+    Josh boot_context_t
         ↓
-    Josh graphical desktop renderer
+    Josh kernel
         ↓
-    Josh graphical shell
+    framebuffer renderer
+        ↓
+    Josh graphical desktop + shell
         ↓
     PS/2 keyboard polling
 
-Limine is currently only the bootloader. After handoff, the Josh kernel owns execution. There is no Linux kernel underneath this native path.
+Limine is currently the boot manager/loader. After handoff, the Josh kernel owns execution. There is no Linux kernel underneath this native path.
+
+Crucially, Limine-specific structures now stop at `boot_limine.c`. Graphics, desktop and shell code consume Josh-owned structures. That is the seam a future JoshBootloader adapter will use.
 
 ## Current native source modules
 
-- `main.c` — kernel entry and boot-protocol requests.
-- `gfx.c` — framebuffer drawing primitives and colour conversion.
+- `main.c` — kernel orchestration after a validated Josh boot context exists.
+- `boot_limine.c` / `boot.h` — boot-protocol adapter and Josh-owned boot context.
+- `gfx.c` — bootloader-independent framebuffer drawing primitives and colour conversion.
 - `font.c` — deliberately tiny built-in 5×7 bitmap font.
 - `desktop.c` — visual composition of the v0.1 desktop.
 - `shell.c` — command state and terminal rendering.

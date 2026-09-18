@@ -1,6 +1,5 @@
 #include "gfx.h"
 #include "font.h"
-#include <limine.h>
 
 static gfx_context_t g;
 
@@ -11,14 +10,15 @@ static uint32_t channel(uint8_t value, uint8_t size, uint8_t shift) {
 }
 
 uint32_t gfx_rgb(uint8_t r, uint8_t gch, uint8_t b) {
-    struct limine_framebuffer *fb = g.fb;
+    const boot_framebuffer_t *fb = &g.fb;
     return channel(r, fb->red_mask_size, fb->red_mask_shift)
          | channel(gch, fb->green_mask_size, fb->green_mask_shift)
          | channel(b, fb->blue_mask_size, fb->blue_mask_shift);
 }
 
-void gfx_init(struct limine_framebuffer *fb) {
-    g.fb = fb;
+void gfx_init(const boot_framebuffer_t *fb) {
+    if (!fb) return;
+    g.fb = *fb;
     g.width = fb->width;
     g.height = fb->height;
 }
@@ -27,13 +27,14 @@ uint64_t gfx_width(void) { return g.width; }
 uint64_t gfx_height(void) { return g.height; }
 
 static void put_pixel(int x, int y, uint32_t colour) {
-    if (!g.fb || x < 0 || y < 0 || (uint64_t)x >= g.width || (uint64_t)y >= g.height) return;
-    volatile uint32_t *pixels = (volatile uint32_t *)g.fb->address;
-    pixels[(uint64_t)y * (g.fb->pitch / 4) + (uint64_t)x] = colour;
+    if (!g.fb.address || x < 0 || y < 0 ||
+        (uint64_t)x >= g.width || (uint64_t)y >= g.height) return;
+    volatile uint32_t *pixels = (volatile uint32_t *)g.fb.address;
+    pixels[(uint64_t)y * (g.fb.pitch / 4) + (uint64_t)x] = colour;
 }
 
 void gfx_clear_gradient(void) {
-    if (!g.fb) return;
+    if (!g.fb.address) return;
     for (uint64_t y = 0; y < g.height; ++y) {
         for (uint64_t x = 0; x < g.width; ++x) {
             uint32_t vx = (uint32_t)(x * 255 / (g.width ? g.width : 1));

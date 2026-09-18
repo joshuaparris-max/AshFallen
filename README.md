@@ -14,7 +14,7 @@ Josh OS currently spans three related repositories with different jobs:
 - **[Parris-Tech-Services/transfer2](https://github.com/Parris-Tech-Services/transfer2)** — a **Stage 0 product-track extraction/prototype** focused on the browser shell and ArchISO live image. It is useful for iterating on the desktop experience, but it is not the canonical native-kernel repository.
 - **[Parris-Tech-Services/MIDIVisualizer](https://github.com/Parris-Tech-Services/MIDIVisualizer)** — the **JoshBIOS / firmware / bootloader research stack**. Its `boot/`, `firmware/` and small `kernel/` payload are exploring the power-on-to-kernel handoff independently of the main Josh OS kernel.
 
-The current native Josh OS kernel in this repository boots through **Limine**. JoshBIOS does **not** currently boot this kernel. The intended future integration point is a versioned boot ABI: once JoshBootloader can load ELF64/x86-64 kernels and provide the required memory/framebuffer/firmware information, it can become an alternative boot path into the canonical Josh OS kernel.
+The current native Josh OS kernel boots through **Limine**. JoshBIOS does **not** currently boot this kernel. The intended future integration point is a versioned boot ABI: once JoshBootloader can load ELF64/x86-64 kernels and provide the required memory/framebuffer/firmware information, it can become an alternative boot path into the canonical Josh OS kernel.
 
 ## Two complementary tracks
 
@@ -43,6 +43,8 @@ GitHub Actions builds this as the **JoshOS-Stage0-Live-x86_64** artifact.
 The independent Josh kernel already:
 
 - boots on x86-64 through Limine;
+- shows a **Josh OS Boot Manager** for three seconds before auto-boot;
+- isolates Limine behind a Josh-owned boot-context adapter;
 - produces a hybrid BIOS/UEFI ISO suitable for QEMU and Ventoy;
 - discovers the framebuffer and memory map;
 - renders directly to the framebuffer;
@@ -143,6 +145,7 @@ The Stage 0 product ISO is intentionally a compatibility vehicle: ArchISO + Ligh
 
 - [Roadmap](ROADMAP.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [Boot stack: power button to desktop](docs/BOOT_STACK.md)
 - [Product and architecture strategy](docs/PRODUCT_STRATEGY.md)
 - [Desktop prototype vs native kernel](docs/DESKTOP_PROTOTYPE_COMPARISON.md)
 - [Product-track architecture](docs/product/ARCHITECTURE.md)

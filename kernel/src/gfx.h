@@ -3,16 +3,15 @@
 
 #include <stdint.h>
 #include <stddef.h>
-
-struct limine_framebuffer;
+#include "boot.h"
 
 typedef struct {
-    struct limine_framebuffer *fb;
+    boot_framebuffer_t fb;
     uint64_t width;
     uint64_t height;
 } gfx_context_t;
 
-void gfx_init(struct limine_framebuffer *fb);
+void gfx_init(const boot_framebuffer_t *fb);
 uint64_t gfx_width(void);
 uint64_t gfx_height(void);
 uint32_t gfx_rgb(uint8_t r, uint8_t g, uint8_t b);
