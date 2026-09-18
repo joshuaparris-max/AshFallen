@@ -11,7 +11,7 @@ LIMINE_VERSION := 12.9.0
 LIMINE_SHA256 := 84059c93b4ea03994af6d614654c7095291388850ea7b258d64f9263abde5557
 LIMINE_URL := https://github.com/Limine-Bootloader/Limine/releases/download/v$(LIMINE_VERSION)/limine-binary.tar.gz
 
-.PHONY: all kernel host-tests run smoke fault-smoke clean distclean
+.PHONY: all kernel host-tests run smoke keyboard-smoke fault-smoke clean distclean
 all: $(IMAGE).iso
 
 limine-binary.tar.gz:
@@ -84,6 +84,9 @@ smoke: $(IMAGE).iso
 	grep -q JOSHOS_BOOT_OK boot.log
 	@echo "Josh OS boot smoke test passed."
 
+keyboard-smoke: $(IMAGE).iso
+	python3 kernel/tests/qemu_keyboard_smoke.py $(IMAGE).iso
+
 fault-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
 	$(MAKE) -C kernel clean
 	$(MAKE) IMAGE=$(FAULT_IMAGE) EXTRA_CPPFLAGS=-DJOSHOS_FAULT_TEST_UD2 $(FAULT_IMAGE).iso
@@ -152,7 +155,7 @@ fault-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
 
 clean:
 	$(MAKE) -C kernel clean
-	rm -rf iso_root boot.log fault-boot.log divide-fault-boot.log page-fault-boot.log gp-fault-boot.log double-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DIVIDE_FAULT_IMAGE).iso $(PAGE_FAULT_IMAGE).iso $(GP_FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso
+	rm -rf iso_root boot.log keyboard-smoke.log keyboard-smoke.monitor fault-boot.log divide-fault-boot.log page-fault-boot.log gp-fault-boot.log double-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DIVIDE_FAULT_IMAGE).iso $(PAGE_FAULT_IMAGE).iso $(GP_FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso
 
 distclean:
 	$(MAKE) -C kernel distclean
