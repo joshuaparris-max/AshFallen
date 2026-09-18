@@ -12,7 +12,32 @@ This calibration is deliberately candid so the roadmap does not confuse “liste
 
 Time estimates below are rough order-of-magnitude calibration only, not commitments.
 
+## What “done” means in this document
+
+A label such as **done** means **done at the current milestone scope**, not “finished forever”.
+
+For this project, a subsystem should only be called done when:
+
+1. real implementation code exists;
+2. it executes on the intended current target;
+3. there is observable evidence that it works;
+4. the current scope and limitations are documented;
+5. later roadmap work may still replace or expand it.
+
+For the items already labelled done:
+
+- **Desktop shell + apps — milestone done:** the Stage 0 prototype has real movable/resizable/minimisable/maximisable windows, snapping, dock/menu bar, themes and working prototype apps. It is **not** yet the native Josh userspace/compositor.
+- **Serial/VGA diagnostics + boot menus — milestone done:** JoshBIOS has direct early VGA text, COM1 serial output, a timed Stage 2 boot menu, diagnostics and reboot. Full recovery, previous-known-good, UEFI and richer firmware diagnostics remain future work.
+- **Stage 1 MBR + INT 13h disk load — milestone done:** the 512-byte boot sector is real, ends in the 0xAA55 signature, verifies BIOS EDD support, uses INT 13h extensions (AH=42h) for LBA loading, loads Stage 2 and transfers control. It does not yet understand partitions or filesystems.
+- **Framebuffer graphics + font rendering — milestone done:** the canonical Josh kernel receives a framebuffer, validates it, writes pixels directly, draws rectangles/panels/text and uses its own built-in bitmap font. This is not GPU acceleration or a compositor.
+- **A20 / GDT / protected mode — milestone done:** JoshBootloader enables A20, installs its own GDT, sets CR0.PE and successfully transfers into 32-bit protected-mode code. This is not yet x86-64 long mode.
+
+So “done” should be read as:
+
+> **We have crossed this milestone with working code and evidence; we have not exhausted the subject.**
+
 ---
+
 
 # Three difficulty bands
 
