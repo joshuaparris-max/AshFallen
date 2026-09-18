@@ -120,6 +120,9 @@ size_t josh_udp_build_ipv4(void *buffer, size_t capacity,
                            const uint8_t destination_ip[4],
                            uint16_t source_port, uint16_t destination_port,
                            const void *payload, size_t payload_length);
+uint16_t josh_udp_checksum_ipv4(const uint8_t source_ip[4],
+                                const uint8_t destination_ip[4],
+                                const void *segment, size_t length);
 
 josh_net_status_t josh_tcp_parse(const void *segment, size_t length,
                                   josh_tcp_segment_t *out);
@@ -127,6 +130,12 @@ uint16_t josh_tcp_checksum_ipv4(const uint8_t source_ip[4],
                                 const uint8_t destination_ip[4],
                                 const void *segment, size_t length);
 
+size_t josh_dhcp_build_discover(void *buffer, size_t capacity,
+                                 uint32_t xid, const uint8_t mac[6]);
+size_t josh_dhcp_build_request(void *buffer, size_t capacity,
+                               uint32_t xid, const uint8_t mac[6],
+                               const uint8_t requested_ip[4],
+                               const uint8_t server_id[4]);
 josh_net_status_t josh_dhcp_parse_reply(const void *packet, size_t length,
                                          uint32_t expected_xid,
                                          josh_dhcp_offer_t *out);
