@@ -81,6 +81,35 @@ static uint64_t pointer_to_phys(const void *pointer, uint64_t hhdm_offset) {
     return address - hhdm_offset;
 }
 
+static boot_status_t find_framebuffer_phys(
+    const struct limine_framebuffer *fb,
+    uint64_t *start_out,
+    uint64_t *end_out
+) {
+    if (!fb || !start_out || !end_out || !memmap_request.response) {
+        return BOOT_NO_PHYSICAL_MAP;
+    }
+
+    uint64_t bytes = fb->pitch * fb->height;
+    if (bytes == 0) return BOOT_NO_PHYSICAL_MAP;
+
+    const struct limine_memmap_entry *match = 0;
+    for (uint64_t i = 0; i < memmap_request.response->entry_count; ++i) {
+        const struct limine_memmap_entry *entry = memmap_request.response->entries[i];
+        if (!entry || entry->type != LIMINE_MEMMAP_FRAMEBUFFER ||
+            entry->length < bytes || add_overflows_u64(entry->base, bytes)) {
+            continue;
+        }
+        if (match) return BOOT_NO_PHYSICAL_MAP;
+        match = entry;
+    }
+
+    if (!match) return BOOT_NO_PHYSICAL_MAP;
+    *start_out = match->base;
+    *end_out = match->base + bytes;
+    return BOOT_OK;
+}
+
 static boot_status_t copy_memory_map(boot_context_t *context, uint64_t *usable_mib_out) {
     if (!context || !usable_mib_out || !memmap_request.response ||
         memmap_request.response->entry_count == 0 ||
@@ -148,6 +177,11 @@ boot_status_t boot_limine_context_init(boot_context_t *context) {
 
     boot_status_t memory_status = copy_memory_map(context, &context->usable_memory_mib);
     if (memory_status != BOOT_OK) return memory_status;
+
+    boot_status_t framebuffer_phys_status =
+        find_framebuffer_phys(fb, &context->framebuffer_phys_start,
+                              &context->framebuffer_phys_end);
+    if (framebuffer_phys_status != BOOT_OK) return framebuffer_phys_status;
 
     uint64_t kernel_size = (uint64_t)(uintptr_t)__kernel_end -
                            (uint64_t)(uintptr_t)__kernel_start;
