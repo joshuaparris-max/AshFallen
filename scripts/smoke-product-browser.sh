@@ -36,8 +36,16 @@ run_boot() {
        grep -q 'JOSHOS_BROWSER_PROFILE_READY' "$log" 2>/dev/null &&
        grep -q 'JOSHOS_BROWSER_MEDIA_OK' "$log" 2>/dev/null &&
        grep -q 'JOSHOS_NETWORK_READY' "$log" 2>/dev/null &&
+       grep -q 'JOSHOS_BROWSER_TEST JOSHOS_BROWSER_ACCEPTANCE_OK' "$log" 2>/dev/null &&
+       grep -q 'JOSHOS_BROWSER_TEST JOSHOS_BROWSER_DOWNLOAD_OK' "$log" 2>/dev/null &&
+       grep -q 'JOSHOS_BROWSER_TEST JOSHOS_BROWSER_MEDIA_OK' "$log" 2>/dev/null &&
+       grep -q 'JOSHOS_BROWSER_TEST JOSHOS_BROWSER_AUDIO_STREAM_OK' "$log" 2>/dev/null &&
+       grep -q 'JOSHOS_BROWSER_TEST JOSHOS_GPU_RENDERER ' "$log" 2>/dev/null &&
        grep -q "$secret_marker" "$log" 2>/dev/null &&
-       grep -q "$persistence_marker" "$log" 2>/dev/null; then
+       grep -q "$persistence_marker" "$log" 2>/dev/null &&
+       { [[ "$pass" != "1" ]] || grep -q 'JOSHOS_BROWSER_TEST JOSHOS_BROWSER_PROFILE_PRIMED' "$log"; } &&
+       { [[ "$pass" != "1" ]] || grep -q 'JOSHOS_BROWSER_TEST JOSHOS_BROWSER_CRASH_RECOVERY_OK' "$log"; } &&
+       { [[ "$pass" != "2" ]] || grep -q 'JOSHOS_BROWSER_TEST JOSHOS_BROWSER_PROFILE_OK' "$log"; }; then
       cleanup
       trap - RETURN
       echo "Product browser + internet boot pass $pass succeeded ($persistence_marker)."
