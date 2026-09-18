@@ -826,7 +826,7 @@ static void handle_new_output(struct wl_listener *listener, void *data) {
 
     if (!wlr_output_init_render(
             wlr_output, server->allocator, server->renderer)) {
-        wlr_log(WLR_ERROR, "failed to initialize renderer for output");
+        wlr_log(WLR_ERROR, "%s", "failed to initialize renderer for output");
         return;
     }
 
@@ -841,7 +841,7 @@ static void handle_new_output(struct wl_listener *listener, void *data) {
 
     if (!wlr_output_commit_state(wlr_output, &state)) {
         wlr_output_state_finish(&state);
-        wlr_log(WLR_ERROR, "failed to enable output");
+        wlr_log(WLR_ERROR, "%s", "failed to enable output");
         return;
     }
     wlr_output_state_finish(&state);
