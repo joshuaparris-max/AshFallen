@@ -30,9 +30,11 @@ _Static_assert(sizeof(gdtr_t) == 10, "x86-64 GDTR layout changed");
 _Static_assert(sizeof(tss64_t) == 104, "x86-64 TSS layout changed");
 _Static_assert(GDT_KERNEL_CODE_SELECTOR == 0x08u, "assembly selector must match GDT");
 _Static_assert(GDT_KERNEL_DATA_SELECTOR == 0x10u, "assembly selector must match GDT");
-_Static_assert(GDT_TSS_SELECTOR == 0x18u, "assembly selector must match GDT");
+_Static_assert(GDT_USER_DATA_SELECTOR == 0x1Bu, "user data selector must match GDT");
+_Static_assert(GDT_USER_CODE_SELECTOR == 0x23u, "user code selector must match GDT");
+_Static_assert(GDT_TSS_SELECTOR == 0x28u, "assembly selector must match GDT");
 
-static uint64_t gdt[5] __attribute__((aligned(16)));
+static uint64_t gdt[7] __attribute__((aligned(16)));
 static tss64_t tss __attribute__((aligned(16)));
 static uint8_t double_fault_stack[DOUBLE_FAULT_STACK_SIZE] __attribute__((aligned(16)));
 
@@ -44,8 +46,8 @@ static void build_tss_descriptor(uint64_t base, uint32_t limit) {
     descriptor |= UINT64_C(0x89) << 40;
     descriptor |= ((uint64_t)(limit >> 16) & 0x0Fu) << 48;
     descriptor |= ((base >> 24) & 0xFFu) << 56;
-    gdt[3] = descriptor;
-    gdt[4] = base >> 32;
+    gdt[5] = descriptor;
+    gdt[6] = base >> 32;
 }
 
 int gdt_init(void) {
@@ -57,6 +59,8 @@ int gdt_init(void) {
     gdt[0] = 0;
     gdt[1] = UINT64_C(0x00209A0000000000);
     gdt[2] = UINT64_C(0x0000920000000000);
+    gdt[3] = UINT64_C(0x0000F20000000000);
+    gdt[4] = UINT64_C(0x0020FA0000000000);
 
     tss.ist1 = (uint64_t)(uintptr_t)(double_fault_stack + sizeof(double_fault_stack));
     tss.iomap_base = (uint16_t)sizeof(tss);
@@ -82,7 +86,7 @@ int gdt_init(void) {
         "xorw %%ax, %%ax\n\t"
         "movw %%ax, %%fs\n\t"
         "movw %%ax, %%gs\n\t"
-        "movw $0x18, %%ax\n\t"
+        "movw $0x28, %%ax\n\t"
         "ltr %%ax\n\t"
         :
         : "m"(gdtr)
@@ -95,4 +99,9 @@ int gdt_init(void) {
     __asm__ volatile ("str %0" : "=r"(tr));
 
     return cs == GDT_KERNEL_CODE_SELECTOR && tr == GDT_TSS_SELECTOR;
+}
+
+
+void gdt_set_rsp0(uint64_t rsp0) {
+    tss.rsp0 = rsp0;
 }
