@@ -10,6 +10,8 @@ fi
 
 profile="${JOSH_BROWSER_PROFILE:-$HOME/.config/chromium-josh-browser}"
 downloads="${JOSH_BROWSER_DOWNLOADS:-$HOME/Downloads}"
+ozone_platform="${JOSH_BROWSER_OZONE_PLATFORM:-x11}"
+debug_port="${JOSH_BROWSER_DEBUG_PORT:-9222}"
 
 mkdir -p "$profile" "$downloads"
 chmod 700 "$profile" "$downloads"
@@ -27,7 +29,9 @@ fi
 args=(
   --user-data-dir="$profile"
   --password-store=gnome-libsecret
-  --ozone-platform=x11
+  --ozone-platform="$ozone_platform"
+  --remote-debugging-address=127.0.0.1
+  --remote-debugging-port="$debug_port"
   --start-maximized
   --no-first-run
   --disable-session-crashed-bubble
