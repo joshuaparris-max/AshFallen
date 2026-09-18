@@ -33,27 +33,66 @@ static boot_status_t validate_framebuffer(const JoshFramebufferInfo *fb) {
     return BOOT_OK;
 }
 
-static boot_status_t usable_memory_bytes(const JoshBootInfo *info, uint64_t *bytes_out) {
-    if (!info || !bytes_out || info->memory_map_address == 0 || info->memory_map_entries == 0 ||
+static boot_memory_type_t map_memory_type(uint32_t type) {
+    switch (type) {
+        case JOSH_MEMORY_USABLE: return BOOT_MEMORY_USABLE;
+        case JOSH_MEMORY_ACPI_RECLAIMABLE: return BOOT_MEMORY_ACPI_RECLAIMABLE;
+        case JOSH_MEMORY_ACPI_NVS: return BOOT_MEMORY_ACPI_NVS;
+        case JOSH_MEMORY_BAD: return BOOT_MEMORY_BAD;
+        case JOSH_MEMORY_RESERVED:
+        default:
+            return BOOT_MEMORY_RESERVED;
+    }
+}
+
+static boot_status_t copy_memory_map(
+    boot_context_t *context,
+    const JoshBootInfo *info,
+    uint64_t *usable_bytes_out
+) {
+    if (!context || !info || !usable_bytes_out ||
+        info->memory_map_address == 0 || info->memory_map_entries == 0 ||
         info->memory_map_entries > JOSH_BOOT_MAX_MEMORY_ENTRIES ||
+        info->memory_map_entries > BOOT_MEMORY_MAX_ENTRIES ||
         info->memory_map_entry_size < sizeof(JoshMemoryMapEntry) ||
         info->memory_map_entry_size > 4096u) {
         return BOOT_NO_MEMORY_MAP;
     }
 
+    context->memory_map_count = 0;
+    uint64_t usable_bytes = 0;
     const uint8_t *base = (const uint8_t *)(uintptr_t)info->memory_map_address;
-    uint64_t bytes = 0;
+
     for (uint32_t i = 0; i < info->memory_map_entries; ++i) {
         const JoshMemoryMapEntry *entry = (const JoshMemoryMapEntry *)(base +
             (uint64_t)i * info->memory_map_entry_size);
-        if (entry->length != 0 && add_overflows_u64(entry->base, entry->length)) {
+
+        if (entry->length == 0) continue;
+        if (add_overflows_u64(entry->base, entry->length)) {
             return BOOT_INVALID_BOOT_INFO;
         }
-        if (entry->type != JOSH_MEMORY_USABLE || entry->length == 0) continue;
-        if (add_overflows_u64(bytes, entry->length)) bytes = UINT64_MAX;
-        else bytes += entry->length;
+        if (context->memory_map_count >= BOOT_MEMORY_MAX_ENTRIES) {
+            return BOOT_NO_MEMORY_MAP;
+        }
+
+        boot_memory_region_t *out =
+            &context->memory_map[context->memory_map_count++];
+        out->base = entry->base;
+        out->length = entry->length;
+        out->type = map_memory_type(entry->type);
+        out->flags = entry->flags;
+
+        if (out->type == BOOT_MEMORY_USABLE) {
+            if (add_overflows_u64(usable_bytes, out->length)) {
+                usable_bytes = UINT64_MAX;
+            } else {
+                usable_bytes += out->length;
+            }
+        }
     }
-    *bytes_out = bytes;
+
+    if (context->memory_map_count == 0) return BOOT_NO_MEMORY_MAP;
+    *usable_bytes_out = usable_bytes;
     return BOOT_OK;
 }
 
@@ -71,7 +110,7 @@ boot_status_t boot_josh_context_init(boot_context_t *context, const JoshBootInfo
     }
 
     uint64_t usable_bytes = 0;
-    boot_status_t status = usable_memory_bytes(info, &usable_bytes);
+    boot_status_t status = copy_memory_map(context, info, &usable_bytes);
     if (status != BOOT_OK) return status;
     status = validate_framebuffer(&info->framebuffer);
     if (status != BOOT_OK) return status;
