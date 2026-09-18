@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+set -u
+
+xset s off 2>/dev/null || true
+xset -dpms 2>/dev/null || true
+xsetroot -solid '#08131c' 2>/dev/null || true
+
+VBoxClient --vmsvga >/tmp/josh-os-vbox-vmsvga.log 2>&1 &
+VBoxClient --clipboard >/tmp/josh-os-vbox-clipboard.log 2>&1 &
+
+openbox >/tmp/josh-os-openbox.log 2>&1 &
+sleep 0.5
+
+url='file:///opt/josh-os/shell/index.html'
+
+while true; do
+  chromium     --kiosk     --ozone-platform=x11     --disable-gpu     --no-first-run     --disable-session-crashed-bubble     --disable-infobars     --disable-translate     --password-store=basic     --user-data-dir=/home/josh/.config/chromium-josh-os     "$url" >/tmp/josh-os-chromium.log 2>&1
+  sleep 1
+done
