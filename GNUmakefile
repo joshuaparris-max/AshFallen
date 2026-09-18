@@ -66,6 +66,7 @@ smoke: $(IMAGE).iso
 	grep -q JOSHOS_PAGING_PERMISSIONS_OK boot.log
 	grep -q JOSHOS_HEAP_OK boot.log
 	grep -q JOSHOS_HEAP_SELF_TEST_OK boot.log
+	grep -q JOSHOS_NET_LOOPBACK_OK boot.log
 	grep -q JOSHOS_BOOT_OK boot.log
 	@echo "Josh OS boot smoke test passed."
 
