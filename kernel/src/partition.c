@@ -25,10 +25,6 @@ static uint64_t le64(const uint8_t *p) {
     return (uint64_t)le32(p) | ((uint64_t)le32(p + 4) << 32);
 }
 
-static int add_overflows_u64(uint64_t a, uint64_t b) {
-    return UINT64_MAX - a < b;
-}
-
 static void zero_bytes(void *pointer, size_t length) {
     uint8_t *bytes = (uint8_t *)pointer;
     for (size_t i = 0; i < length; ++i) bytes[i] = 0;
