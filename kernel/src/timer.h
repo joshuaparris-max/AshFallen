@@ -19,6 +19,7 @@ int timer_calculate_pit(
 
 timer_status_t timer_init(uint32_t requested_hz);
 uint64_t timer_ticks(void);
+uint32_t timer_frequency_hz(void);
 uint64_t timer_now_ns(void);
 int timer_sleep_ms(uint64_t milliseconds);
 const char *timer_status_string(timer_status_t status);
