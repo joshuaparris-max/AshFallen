@@ -148,6 +148,14 @@ pmm_status_t pmm_init(const boot_context_t *boot) {
         if (status != PMM_OK) return status;
     }
 
+    if (boot->framebuffer_phys_start < boot->framebuffer_phys_end) {
+        uint64_t start = align_down(boot->framebuffer_phys_start);
+        uint64_t end;
+        if (!align_up(boot->framebuffer_phys_end, &end)) return PMM_BAD_ARGUMENT;
+        pmm_status_t status = remove_interval(start, end);
+        if (status != PMM_OK) return status;
+    }
+
     if (free_range_count == 0) return PMM_NO_MEMORY;
 
     managed_range_count = free_range_count;
