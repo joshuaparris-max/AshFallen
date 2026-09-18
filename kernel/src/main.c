@@ -40,6 +40,32 @@ static void report_boot_error(boot_status_t status) {
     }
 }
 
+#ifdef JOSHOS_FAULT_TEST_PAGE
+static void trigger_page_fault(const boot_context_t *boot) {
+    const uint64_t target = UINT64_C(0x00007ffffffff000);
+    uint64_t cr3 = 0;
+    __asm__ volatile ("movq %%cr3, %0" : "=r"(cr3));
+
+    uint64_t pml4_phys = cr3 & UINT64_C(0x000ffffffffff000);
+    uint64_t pml4_virt = boot->physical_memory_offset + pml4_phys;
+    volatile uint64_t *pml4 = (volatile uint64_t *)(uintptr_t)pml4_virt;
+    uint64_t pml4_index = (target >> 39) & UINT64_C(0x1ff);
+
+    /*
+     * Make the target deterministically non-present. This keeps the exception
+     * test independent of whichever bootstrap mappings Limine happens to
+     * install on a particular version.
+     */
+    pml4[pml4_index] = 0;
+    __asm__ volatile ("invlpg (%0)" : : "r"((uintptr_t)target) : "memory");
+
+    serial_write("JOSHOS_FAULT_TEST_PAGE\n");
+    *(volatile uint64_t *)(uintptr_t)target = UINT64_C(1);
+    serial_write("JOSHOS_ERROR_PAGE_TEST_RETURNED\n");
+    halt_forever();
+}
+#endif
+
 void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_payload) {
     serial_init();
     serial_write("JOSHOS_KERNEL_ENTERED\n");
@@ -65,6 +91,34 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
     );
 #endif
 
+#ifdef JOSHOS_FAULT_TEST_DIVIDE
+    serial_write("JOSHOS_FAULT_TEST_DIVIDE\n");
+    __asm__ volatile (
+        "mov $1, %%eax\n\t"
+        "xor %%edx, %%edx\n\t"
+        "xor %%ecx, %%ecx\n\t"
+        "div %%ecx"
+        :
+        :
+        : "rax", "rcx", "rdx", "memory"
+    );
+    serial_write("JOSHOS_ERROR_DIVIDE_TEST_RETURNED\n");
+    halt_forever();
+#endif
+
+#ifdef JOSHOS_FAULT_TEST_GP
+    serial_write("JOSHOS_FAULT_TEST_GP\n");
+    __asm__ volatile (
+        "movw $0xffff, %%ax\n\t"
+        "movw %%ax, %%ds"
+        :
+        :
+        : "rax", "memory"
+    );
+    serial_write("JOSHOS_ERROR_GP_TEST_RETURNED\n");
+    halt_forever();
+#endif
+
 #ifdef JOSHOS_FAULT_TEST_DOUBLE_FAULT
     serial_write("JOSHOS_FAULT_TEST_DOUBLE_FAULT\n");
     interrupts_arm_double_fault_test();
@@ -87,6 +141,10 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
     }
 
     serial_write("JOSHOS_BOOT_ADAPTER_OK\n");
+
+#ifdef JOSHOS_FAULT_TEST_PAGE
+    trigger_page_fault(&boot);
+#endif
 
     if (boot.rsdp_phys != 0) {
         serial_write("JOSHOS_RSDP_OK\n");
