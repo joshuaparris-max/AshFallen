@@ -60,6 +60,7 @@ smoke: $(IMAGE).iso
 	grep -q JOSHOS_PMM_OK boot.log
 	grep -q JOSHOS_PMM_STRESS_OK boot.log
 	grep -q JOSHOS_PAGING_OK boot.log
+	grep -q JOSHOS_HEAP_OK boot.log
 	grep -q JOSHOS_BOOT_OK boot.log
 	@echo "Josh OS boot smoke test passed."
 
