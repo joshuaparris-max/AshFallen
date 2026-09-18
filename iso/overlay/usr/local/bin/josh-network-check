@@ -25,7 +25,7 @@ else
   fail "systemd-timesyncd is not active"
 fi
 
-if nmcli -t -f STATE general 2>/dev/null | grep -Eq '^(connected|connected \(site only\)|connecting)$'; then
+if nmcli -t -f STATE general 2>/dev/null | grep -Eq '^(connected|connecting)'; then
   pass "NetworkManager reports a usable connection state"
 else
   fail "NetworkManager does not report a usable connection"
