@@ -18,7 +18,19 @@ static void halt_forever(void) {
 }
 
 static __attribute__((noreturn)) void kernel_after_paging(void) {
+    if ((cpu_read_cr3() & UINT64_C(0x000ffffffffff000)) !=
+        paging_current_root()) {
+        serial_write("JOSHOS_ERROR_PAGING_CR3\n");
+        halt_forever();
+    }
     serial_write("JOSHOS_PAGING_OWNED_OK\n");
+
+    if (!paging_verify_kernel_layout()) {
+        serial_write("JOSHOS_ERROR_PAGING_PERMISSIONS\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_PAGING_PERMISSIONS_OK\n");
+
     gfx_init(&boot_context.framebuffer);
     desktop_layout_t layout = desktop_draw();
     shell_init(layout.terminal_x, layout.terminal_y, layout.terminal_w, layout.terminal_h,
