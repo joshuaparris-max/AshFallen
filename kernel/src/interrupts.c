@@ -124,6 +124,9 @@ EXCEPTION_WITH_ERROR(exception_30, 30)
 EXCEPTION_NO_ERROR(exception_31, 31)
 
 void interrupts_init(void) {
+    /* Hardware IRQs stay disabled until the interrupt-controller milestone. */
+    __asm__ volatile ("cli" ::: "memory");
+
     static const uintptr_t exception_handlers[32] = {
         (uintptr_t)exception_0,  (uintptr_t)exception_1,
         (uintptr_t)exception_2,  (uintptr_t)exception_3,
