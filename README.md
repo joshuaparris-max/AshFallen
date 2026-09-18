@@ -143,6 +143,7 @@ The Stage 0 product ISO is intentionally a compatibility vehicle: ArchISO + Ligh
 
 ## Documentation
 
+- [Full-stack programming plan](docs/FULL_STACK_PROGRAMMING_PLAN.md) — 37 phases from power-button policy through firmware, kernel, userspace, desktop and applications.
 - [Roadmap](ROADMAP.md)
 - [Power button → desktop roadmap](docs/POWER_ON_TO_DESKTOP_ROADMAP.md)
 - [Native kernel roadmap](docs/KERNEL_ROADMAP.md)
