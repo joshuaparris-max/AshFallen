@@ -12,6 +12,7 @@
 #include "paging.h"
 #include "serial.h"
 #include "shell.h"
+#include "storage_runtime.h"
 
 static boot_context_t boot_context;
 
@@ -53,6 +54,12 @@ static __attribute__((noreturn)) void kernel_after_paging(void) {
         halt_forever();
     }
     serial_write("JOSHOS_NET_LOOPBACK_OK\n");
+
+    if (!storage_runtime_init(&boot_context)) {
+        serial_write("JOSHOS_ERROR_STORAGE_RUNTIME\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_STORAGE_RUNTIME_OK\n");
 
     gfx_init(&boot_context.framebuffer);
     desktop_layout_t layout = desktop_draw();
