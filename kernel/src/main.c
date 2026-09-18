@@ -1,5 +1,6 @@
 #include <stdint.h>
 #include "boot.h"
+#include "cpu.h"
 #include "desktop.h"
 #include "gdt.h"
 #include "gfx.h"
@@ -62,6 +63,19 @@ static void report_boot_error(boot_status_t status) {
 void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_payload) {
     serial_init();
     serial_write("JOSHOS_KERNEL_ENTERED\n");
+
+    cpu_features_t cpu = cpu_detect();
+    if (!cpu_required_features_present(&cpu)) {
+        serial_write("JOSHOS_ERROR_CPU_FEATURES\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_CPU_FEATURES_OK\n");
+
+    if (!cpu_enable_nx(&cpu)) {
+        serial_write("JOSHOS_ERROR_NX_ENABLE\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_NX_OK\n");
 
     if (!gdt_init()) {
         serial_write("JOSHOS_ERROR_GDT_TSS_INIT\n");
