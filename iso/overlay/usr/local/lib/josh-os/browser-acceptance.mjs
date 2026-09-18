@@ -11,6 +11,7 @@ const testPort = 18765;
 const testOrigin = 'http://127.0.0.1:' + testPort;
 const markerValue = 'josh-profile-v1';
 const downloadName = 'josh-browser-download.txt';
+const mediaFile = '/tmp/josh-browser-test.webm';
 
 function out(line) { process.stdout.write(line + '\n'); }
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -46,12 +47,23 @@ function serveFile(req, res, file, attachment = false) {
   fs.createReadStream(file).pipe(res);
 }
 
+if (!fs.existsSync(mediaFile)) {
+  execFileSync('ffmpeg', [
+    '-hide_banner', '-loglevel', 'error', '-y',
+    '-f', 'lavfi', '-i', 'color=c=blue:s=320x180:r=24:d=3',
+    '-f', 'lavfi', '-i', 'sine=frequency=440:sample_rate=48000:duration=3',
+    '-c:v', 'libvpx', '-b:v', '120k',
+    '-c:a', 'libopus', '-b:a', '64k',
+    '-shortest', mediaFile
+  ], { stdio: 'ignore' });
+}
+
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, testOrigin);
   if (url.pathname === '/' || url.pathname === '/index.html') {
     serveFile(req, res, path.join(root, 'index.html'));
   } else if (url.pathname === '/test.webm') {
-    serveFile(req, res, path.join(root, 'test.webm'));
+    serveFile(req, res, mediaFile);
   } else if (url.pathname === '/download.txt') {
     serveFile(req, res, path.join(root, 'download.txt'), true);
   } else {
