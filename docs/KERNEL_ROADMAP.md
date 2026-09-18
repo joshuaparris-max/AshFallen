@@ -50,23 +50,24 @@ Implement:
 - [x] exception stubs;
 - [x] page-fault handler;
 - [x] general-protection-fault handler;
-- [ ] double-fault strategy;
+- [x] double-fault strategy;
 - [ ] register dump;
 - [ ] stack trace groundwork where feasible;
 - [ ] graphical + serial panic path.
 
-The kernel now installs its own 64-bit GDT and TSS before loading the IDT. TSS IST1 points at a dedicated 16 KiB emergency stack and exception vector 8 selects that IST for double-fault entry. Exception gates for vectors 0–31 report the vector, error code, RIP, CS and RFLAGS over serial; page faults also report CR2. A deliberate double-fault test and graphical panic path are still outstanding, so the double-fault strategy is not yet marked complete.
+The kernel installs its own 64-bit GDT and TSS before loading the IDT. TSS IST1 points at a dedicated 16 KiB emergency stack and exception vector 8 selects that IST for double-fault entry. CI deliberately makes #GP delivery fail, forcing the CPU into vector 8, and requires the double-fault panic marker and zero error code. Exception gates for vectors 0–31 report the vector, error code, RIP, CS and RFLAGS over serial; page faults also report CR2. A fuller register dump, stack-trace groundwork and graphical panic path are still outstanding.
 
 ### Test cases
 
 Deliberately trigger:
 
 - [x] invalid opcode;
+- [x] double fault (forced #GP delivery failure);
 - [ ] divide-by-zero;
 - [ ] page fault;
 - [ ] general protection fault.
 
-CI proves the invalid-opcode path reaches the expected serial panic marker instead of silently hanging or triple-faulting.
+CI proves both the invalid-opcode path and the dedicated double-fault/IST path reach their expected serial panic markers instead of silently hanging or triple-faulting.
 
 ---
 
