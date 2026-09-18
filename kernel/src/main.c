@@ -6,6 +6,7 @@
 #include "interrupts.h"
 #include "keyboard.h"
 #include "pmm.h"
+#include "paging.h"
 #include "serial.h"
 #include "shell.h"
 
@@ -150,6 +151,15 @@ void kmain(uint64_t loader_magic1, uint64_t loader_magic2, const void *loader_pa
         halt_forever();
     }
     serial_write("JOSHOS_PMM_STRESS_OK\n");
+
+    paging_status_t paging_status = paging_init(&boot);
+    if (paging_status != PAGING_OK) {
+        serial_write("JOSHOS_ERROR_PAGING_INIT\n");
+        serial_write(paging_status_string(paging_status));
+        serial_write("\n");
+        halt_forever();
+    }
+    serial_write("JOSHOS_PAGING_OK\n");
 
     gfx_init(&boot.framebuffer);
     desktop_layout_t layout = desktop_draw();
