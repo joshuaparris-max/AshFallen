@@ -19,6 +19,7 @@ required_packages=(
   libva-utils
   mesa
   networkmanager
+  nodejs
   pipewire
   pipewire-alsa
   pipewire-audio
@@ -37,18 +38,22 @@ done
 
 launcher="$root/usr/local/bin/josh-os-browser"
 acceptance="$root/usr/local/bin/josh-youtube-acceptance"
+runtime_acceptance="$root/usr/local/lib/josh-os/browser-acceptance.mjs"
+runtime_page="$root/opt/josh-os/browser-test/index.html"
+runtime_download="$root/opt/josh-os/browser-test/download.txt"
 session="$root/usr/local/bin/josh-os-session"
 persist="$root/usr/local/lib/josh-os/prepare-persistent-home"
 media_probe="$root/usr/local/lib/josh-os/browser-media-probe"
 media_page="$root/usr/local/share/josh-os/browser-media-probe.html"
 policy="$root/etc/chromium/policies/managed/josh-os.json"
 
-for path in "$launcher" "$acceptance" "$session" "$persist" "$media_probe" "$media_page" "$policy"; do
+for path in "$launcher" "$acceptance" "$runtime_acceptance" "$runtime_page" "$runtime_download" "$session" "$persist" "$media_probe" "$media_page" "$policy"; do
   [[ -f "$path" ]] || { echo "browser check: missing $path" >&2; exit 1; }
 done
 
 grep -q -- '--password-store=gnome-libsecret' "$launcher"
 grep -q -- '--restore-last-session' "$launcher"
+grep -q -- '--remote-debugging-port' "$launcher"
 if grep -Eq -- '^[[:space:]]*--no-sandbox([[:space:]]|$)' "$launcher"; then
   echo "browser check: launcher must not disable Chromium sandbox" >&2
   exit 1
@@ -68,6 +73,9 @@ grep -q 'gnome-keyring-daemon' "$session"
 grep -q 'JOSHOS_SECRET_STORE_OK' "$root/usr/local/lib/josh-os/browser-ready-probe"
 grep -q 'secret-tool' "$root/usr/local/lib/josh-os/browser-ready-probe"
 grep -q 'josh-os-browser chrome://newtab' "$session"
+grep -q 'JOSHOS_BROWSER_MEDIA_OK' "$runtime_acceptance"
+grep -q 'JOSHOS_BROWSER_DOWNLOAD_OK' "$runtime_acceptance"
+grep -q 'JOSHOS_BROWSER_CRASH_RECOVERY_OK' "$runtime_acceptance"
 
 [[ -L "$root/etc/systemd/system/multi-user.target.wants/josh-os-persistence.service" ]]
 [[ -L "$root/etc/systemd/system/multi-user.target.wants/NetworkManager.service" ]]
