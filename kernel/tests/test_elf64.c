@@ -110,6 +110,11 @@ int main(void) {
     expect("segment flags", last_flags == (ELF64_PF_R | ELF64_PF_X));
 
     make_valid(image);
+    ((test_program_t *)(image + sizeof(test_header_t)))->align = 0x1000;
+    expect("misaligned load segment rejected",
+           elf64_load_image(image, sizeof(image), writer, 0, &entry) == ELF64_BAD_SEGMENT);
+
+    make_valid(image);
     ((test_header_t *)image)->machine = 3;
     expect("wrong machine rejected",
            elf64_load_image(image, sizeof(image), writer, 0, &entry) ==
