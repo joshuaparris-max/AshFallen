@@ -1,0 +1,41 @@
+name: Build Josh OS
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build-and-boot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang lld make xorriso qemu-system-x86 curl git
+
+      - name: Build ISO
+        run: make
+
+      - name: Boot smoke test
+        run: make smoke
+
+      - name: Record checksum
+        run: sha256sum JoshOS-0.1-x86_64.iso | tee JoshOS-0.1-x86_64.iso.sha256
+
+      - name: Upload bootable ISO
+        uses: actions/upload-artifact@v4
+        with:
+          name: JoshOS-0.1-x86_64
+          path: |
+            JoshOS-0.1-x86_64.iso
+            JoshOS-0.1-x86_64.iso.sha256
+          if-no-files-found: error
