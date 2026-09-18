@@ -240,3 +240,15 @@ input, select, textarea { font: inherit; color: inherit; }
 .swatches { display: flex; gap: var(--space-2); flex-wrap: wrap; }
 .swatch { width: 28px; height: 28px; border-radius: var(--radius-full); border: 2px solid transparent; }
 .swatch[aria-current='true'] { border-color: var(--color-text); }
+
+
+.network-status { min-height: 22px; }
+.network-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, .8fr);
+  gap: var(--space-2);
+  align-items: center;
+}
+.network-controls .btn { width: 100%; }
+.network-controls select,
+.network-controls input { width: 100%; min-width: 0; }
