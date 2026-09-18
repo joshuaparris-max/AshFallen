@@ -70,6 +70,13 @@ smoke: $(IMAGE).iso
 	grep -q JOSHOS_PCI_OK boot.log
 	grep -q JOSHOS_E1000_OK boot.log
 	grep -q JOSHOS_NET_LOOPBACK_OK boot.log
+	grep -q JOSHOS_ACPI_MADT_OK boot.log
+	grep -q JOSHOS_APIC_OK boot.log
+	grep -q JOSHOS_IOAPIC_OK boot.log
+	grep -q JOSHOS_TIMER_CONFIG_OK boot.log
+	grep -q JOSHOS_KEYBOARD_IRQ_CONFIG_OK boot.log
+	grep -q JOSHOS_TIMER_IRQ_OK boot.log
+	grep -q JOSHOS_INTERRUPT_INPUT_READY boot.log
 	grep -q JOSHOS_BOOT_OK boot.log
 	@echo "Josh OS boot smoke test passed."
 
