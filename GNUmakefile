@@ -54,7 +54,7 @@ run: $(IMAGE).iso
 
 smoke: $(IMAGE).iso
 	rm -f boot.log
-	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(IMAGE).iso -nic user,model=e1000 -display none -serial stdio -no-reboot > boot.log 2>&1
+	-timeout 10s qemu-system-x86_64 -M q35 -smp 2 -m 256M -cdrom $(IMAGE).iso -nic user,model=e1000 -display none -serial stdio -no-reboot > boot.log 2>&1
 	grep -q JOSHOS_CPU_FEATURES_OK boot.log
 	grep -q JOSHOS_NX_OK boot.log
 	grep -q JOSHOS_GDT_TSS_OK boot.log
@@ -73,9 +73,13 @@ smoke: $(IMAGE).iso
 	grep -q JOSHOS_ACPI_MADT_OK boot.log
 	grep -q JOSHOS_APIC_OK boot.log
 	grep -q JOSHOS_IOAPIC_OK boot.log
+	grep -q JOSHOS_SMP_TOPOLOGY_OK boot.log
+	grep -q JOSHOS_PERCPU_STACKS_OK boot.log
+	grep -q JOSHOS_SMP_MULTICPU_OK boot.log
 	grep -q JOSHOS_TIMER_CONFIG_OK boot.log
 	grep -q JOSHOS_KEYBOARD_IRQ_CONFIG_OK boot.log
 	grep -q JOSHOS_TIMER_IRQ_OK boot.log
+	grep -q JOSHOS_IPI_OK boot.log
 	grep -q JOSHOS_INTERRUPT_INPUT_READY boot.log
 	grep -q JOSHOS_BOOT_OK boot.log
 	@echo "Josh OS boot smoke test passed."
