@@ -1,0 +1,49 @@
+name: Storage Foundation Tests
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/storage-foundation.yml'
+      - 'kernel/src/pci.c'
+      - 'kernel/src/pci.h'
+      - 'kernel/src/block.h'
+      - 'kernel/src/partition.c'
+      - 'kernel/src/partition.h'
+      - 'kernel/src/ahci.c'
+      - 'kernel/src/ahci.h'
+      - 'kernel/src/io.h'
+      - 'kernel/tests/test_pci.c'
+      - 'kernel/tests/test_partition.c'
+  pull_request:
+    paths:
+      - '.github/workflows/storage-foundation.yml'
+      - 'kernel/src/pci.c'
+      - 'kernel/src/pci.h'
+      - 'kernel/src/block.h'
+      - 'kernel/src/partition.c'
+      - 'kernel/src/partition.h'
+      - 'kernel/src/ahci.c'
+      - 'kernel/src/ahci.h'
+      - 'kernel/src/io.h'
+      - 'kernel/tests/test_pci.c'
+      - 'kernel/tests/test_partition.c'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  host-storage-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: Build and test PCI discovery
+        run: |
+          mkdir -p kernel/obj-host
+          cc -std=c11 -O2 -Wall -Wextra -Werror -DJOSHOS_HOST_TEST -I kernel/src             kernel/tests/test_pci.c kernel/src/pci.c -o kernel/obj-host/test_pci
+          kernel/obj-host/test_pci
+      - name: Build and test block and partition parsing
+        run: |
+          cc -std=c11 -O2 -Wall -Wextra -Werror -I kernel/src             kernel/tests/test_partition.c kernel/src/partition.c -o kernel/obj-host/test_partition
+          kernel/obj-host/test_partition
