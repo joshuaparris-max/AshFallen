@@ -48,6 +48,8 @@ The independent Josh kernel already:
 - isolates Limine behind a Josh-owned boot-context adapter;
 - produces a hybrid BIOS/UEFI ISO suitable for QEMU and Ventoy;
 - discovers the framebuffer and memory map;
+- runs a tested physical page-frame allocator with kernel/framebuffer/firmware reservations;
+- takes ownership of x86-64 page tables after boot and proves the CR3 handoff in QEMU;
 - renders directly to the framebuffer;
 - accepts basic PS/2 keyboard input;
 - exposes a small graphical shell;

@@ -81,22 +81,24 @@ Build a physical page-frame allocator from the boot memory map.
 
 Requirements:
 
-- [ ] reserve kernel image;
-- [ ] reserve boot structures still in use;
-- [ ] reserve framebuffer;
-- [ ] reserve ACPI/firmware regions appropriately;
-- [ ] page-aligned allocation/free;
-- [ ] double-free detection in debug builds;
-- [ ] statistics for total/used/free pages;
-- [ ] deterministic allocator tests with synthetic memory maps.
+- [x] reserve kernel image;
+- [x] reserve boot structures still in use;
+- [x] reserve framebuffer;
+- [x] reserve ACPI/firmware regions appropriately;
+- [x] page-aligned allocation/free;
+- [x] double-free detection in debug builds;
+- [x] statistics for total/used/free pages;
+- [x] deterministic allocator tests with synthetic memory maps.
 
-Start simple. A bitmap allocator is acceptable if its invariants are easy to prove.
+The current range-based allocator consumes the sanitised boot memory map, excludes the low 1 MiB bootstrap area, removes kernel/framebuffer ranges explicitly and treats non-usable/ACPI regions as unavailable. JoshBootloader's live boot structures are below the allocator floor; Limine bootloader/firmware regions remain non-usable through the adapter. Host tests exercise reservation boundaries, alignment, invalid frees, double-free detection, accounting and a 4096-frame allocate/free stress cycle.
+
+AshFallen CI run `35395723343` booted through Limine with the allocator and the first Josh-owned paging handoff. JoshBIOS cross-repo run `35395898854` then loaded the same kernel from FAT32 and reached `JOSHOS_PAGING_OWNED_OK` and `JOSHOS_BOOT_OK`.
 
 ---
 
 ## K3 — Virtual memory
 
-- [ ] own page tables after boot;
+- [x] own page tables after boot;
 - [ ] map kernel with explicit permissions;
 - [ ] NX where supported;
 - [ ] read-only kernel text/rodata after init;
@@ -105,6 +107,8 @@ Start simple. A bitmap allocator is acceptable if its invariants are easy to pro
 - [ ] temporary mapping mechanism;
 - [ ] guard pages around critical stacks;
 - [ ] address-space abstraction for future processes.
+
+The first K3 slice is now real: the kernel allocates its own x86-64 page-table hierarchy from the PMM, maps the direct physical-memory window plus the higher-half kernel, switches CR3, moves to a Josh-owned transition stack and only then emits `JOSHOS_PAGING_OWNED_OK`. This is verified on both the Limine and JoshBootloader QEMU paths. Permissions are intentionally still permissive; W^X/NX and section-level read-only mappings remain outstanding.
 
 Document the intended higher-half layout before it spreads through code.
 
