@@ -4,6 +4,7 @@
 #include <stdint.h>
 
 #define BOOT_MEMORY_MAX_ENTRIES 128u
+#define BOOT_COMMAND_LINE_MAX 127u
 #define BOOT_PHYSICAL_UNLIMITED UINT64_MAX
 
 typedef enum {
@@ -57,6 +58,7 @@ typedef struct {
 
     uint64_t rsdp_phys;
     uint64_t smbios_phys;
+    char command_line[BOOT_COMMAND_LINE_MAX + 1u];
 } boot_context_t;
 
 typedef enum {
