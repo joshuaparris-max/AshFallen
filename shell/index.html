@@ -1,0 +1,32 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Josh OS</title>
+<link rel="stylesheet" href="../design/tokens.css">
+<link rel="stylesheet" href="shell.css">
+</head>
+<body>
+
+<div id="desktop">
+  <div id="snap-preview"></div>
+  <div id="notifications"></div>
+</div>
+
+<header id="menubar">
+  <span class="brand">Josh OS</span>
+  <span class="active-app"></span>
+  <span class="spacer"></span>
+  <span class="status">
+    <button id="theme-toggle" title="Toggle light/dark">&#9681;</button>
+    <span class="clock"></span>
+  </span>
+</header>
+
+<nav id="dock" aria-label="Dock"></nav>
+
+<script src="shell.js"></script>
+<script src="apps.js"></script>
+</body>
+</html>
