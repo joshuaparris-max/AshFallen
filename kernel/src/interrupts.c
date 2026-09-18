@@ -1,4 +1,5 @@
 #include "interrupts.h"
+#include "apic.h"
 #include "gdt.h"
 #include "serial.h"
 #include <stdint.h>
@@ -22,6 +23,10 @@ typedef struct {
 } __attribute__((packed)) idtr_t;
 
 extern const uintptr_t exception_stub_table[32];
+extern void irq_stub_32(void);
+extern void irq_stub_33(void);
+extern void irq_stub_254(void);
+extern void irq_stub_255(void);
 
 _Static_assert(__builtin_offsetof(exception_frame_t, rax) == 0, "exception frame rax offset");
 _Static_assert(__builtin_offsetof(exception_frame_t, r15) == 112, "exception frame r15 offset");
@@ -32,6 +37,9 @@ _Static_assert(__builtin_offsetof(exception_frame_t, rflags) == 152, "exception 
 _Static_assert(__builtin_offsetof(exception_frame_t, stack_rsp) == 160, "exception frame stack offset");
 
 static idt_entry_t idt[IDT_ENTRIES];
+static interrupt_handler_t handlers[IDT_ENTRIES];
+static void *handler_contexts[IDT_ENTRIES];
+static uint64_t unhandled_count;
 
 static __attribute__((noreturn)) void halt_forever(void) {
     __asm__ volatile ("cli");
@@ -120,6 +128,72 @@ __attribute__((noreturn)) void exception_dispatch(exception_frame_t *frame) {
     halt_forever();
 }
 
+uint64_t interrupts_save_disable(void) {
+    uint64_t flags;
+    __asm__ volatile (
+        "pushfq\n\t"
+        "popq %0\n\t"
+        "cli"
+        : "=r"(flags)
+        :
+        : "memory"
+    );
+    return flags;
+}
+
+void interrupts_restore(uint64_t flags) {
+    if ((flags & (UINT64_C(1) << 9)) != 0) {
+        __asm__ volatile ("sti" ::: "memory");
+    }
+}
+
+void interrupts_enable(void) {
+    __asm__ volatile ("sti" ::: "memory");
+}
+
+void interrupts_disable(void) {
+    __asm__ volatile ("cli" ::: "memory");
+}
+
+int interrupts_are_enabled(void) {
+    uint64_t flags;
+    __asm__ volatile ("pushfq; popq %0" : "=r"(flags));
+    return (flags & (UINT64_C(1) << 9)) != 0;
+}
+
+int interrupts_register_handler(
+    uint8_t vector,
+    interrupt_handler_t handler,
+    void *context
+) {
+    if (vector < 32 || !handler) return 0;
+
+    uint64_t flags = interrupts_save_disable();
+    handlers[vector] = handler;
+    handler_contexts[vector] = context;
+    interrupts_restore(flags);
+    return 1;
+}
+
+uint64_t interrupts_unhandled_count(void) {
+    return unhandled_count;
+}
+
+void interrupt_dispatch(uint64_t vector) {
+    if (vector >= IDT_ENTRIES) return;
+
+    interrupt_handler_t handler = handlers[vector];
+    if (handler) {
+        handler((uint8_t)vector, handler_contexts[vector]);
+    } else if (vector != 255) {
+        unhandled_count++;
+    }
+
+    if (vector >= 32 && vector < 255) {
+        apic_eoi();
+    }
+}
+
 void interrupts_init(void) {
     /* Hardware IRQs stay disabled until the interrupt-controller milestone. */
     __asm__ volatile ("cli" ::: "memory");
@@ -129,6 +203,11 @@ void interrupts_init(void) {
         uint8_t ist = vector == 8 ? GDT_DOUBLE_FAULT_IST_INDEX : 0;
         idt_set_gate(vector, exception_stub_table[vector], selector, ist);
     }
+
+    idt_set_gate(32, (uintptr_t)irq_stub_32, selector, 0);
+    idt_set_gate(33, (uintptr_t)irq_stub_33, selector, 0);
+    idt_set_gate(254, (uintptr_t)irq_stub_254, selector, 0);
+    idt_set_gate(255, (uintptr_t)irq_stub_255, selector, 0);
 
     idtr_t idtr = {
         .limit = (uint16_t)(sizeof(idt) - 1),
