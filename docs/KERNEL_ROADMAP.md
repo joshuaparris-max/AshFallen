@@ -1,6 +1,6 @@
 # Josh kernel roadmap
 
-This is the detailed roadmap for the canonical native x86-64 Josh kernel in `kernel/`.
+This is the detailed roadmap for the canonical native x86-64 Josh kernel in \`kernel/\`.
 
 The kernel already boots through Limine, receives a framebuffer and memory map, renders a graphical shell, accepts basic PS/2 keyboard input, and emits a CI boot marker. The next work should turn that demonstrator into a real kernel without losing its current observability.
 
@@ -21,7 +21,7 @@ The kernel already boots through Limine, receives a framebuffer and memory map, 
 ### Goals
 
 - [x] Introduce a boot-adapter layer instead of reading Limine request structures throughout kernel code.
-- [ ] Define an internal `josh_boot_info` representation.
+- [ ] Define an internal \`josh_boot_info\` representation.
 - [x] Validate framebuffer geometry and address arithmetic.
 - [ ] Validate/sanitise memory-map entries.
 - [ ] Preserve raw boot-protocol metadata for debug builds.
@@ -30,7 +30,7 @@ The kernel already boots through Limine, receives a framebuffer and memory map, 
 
 ### Exit test
 
-The same kernel binary or source tree can boot through both supported adapters and reach the same `JOSHOS_BOOT_OK` milestone.
+The same kernel binary or source tree can boot through both supported adapters and reach the same \`JOSHOS_BOOT_OK\` milestone.
 
 ---
 
@@ -40,25 +40,27 @@ Implement:
 
 - [ ] GDT owned by the kernel;
 - [ ] TSS;
-- [ ] IDT;
-- [ ] exception stubs;
-- [ ] page-fault handler;
-- [ ] general-protection-fault handler;
+- [x] IDT;
+- [x] exception stubs;
+- [x] page-fault handler;
+- [x] general-protection-fault handler;
 - [ ] double-fault strategy;
 - [ ] register dump;
 - [ ] stack trace groundwork where feasible;
 - [ ] graphical + serial panic path.
 
+The current slice installs kernel-owned exception gates for vectors 0–31 and reports the vector, error code, RIP, CS and RFLAGS over serial. Page faults also report CR2. The IDT intentionally reuses the code selector supplied by the current Limine environment; a Josh-owned GDT, TSS/IST and graphical panic path are still outstanding.
+
 ### Test cases
 
 Deliberately trigger:
 
-- invalid opcode;
-- divide-by-zero;
-- page fault;
-- general protection fault.
+- [x] invalid opcode;
+- [ ] divide-by-zero;
+- [ ] page fault;
+- [ ] general protection fault.
 
-CI should prove the expected panic marker appears instead of hanging.
+CI proves the invalid-opcode path reaches the expected serial panic marker instead of silently hanging or triple-faulting.
 
 ---
 
