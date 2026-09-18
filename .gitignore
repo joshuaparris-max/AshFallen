@@ -9,3 +9,6 @@ kernel/obj/
 kernel/freestanding-c-hdrs/
 kernel/limine-protocol/
 kernel/.deps-obtained
+dist/
+out/
+work/
