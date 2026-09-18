@@ -15,7 +15,7 @@ static char translate(uint8_t code, int shift_active) {
     };
 
     if (code >= 58) return 0;
-    return shifted ? shifted_map[code] : normal[code];
+    return shift_active ? shifted_map[code] : normal[code];
 }
 
 void keyboard_decode_reset(keyboard_decode_state_t *state) {
