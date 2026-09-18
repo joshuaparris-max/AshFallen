@@ -148,6 +148,8 @@ static __attribute__((noreturn)) void kernel_after_paging(void) {
     serial_write("JOSHOS_BOOT_OK\n");
 
     for (;;) {
+        e1000_poll();
+
         input_event_t event;
         int handled = 0;
         while (input_pop(&event)) {
