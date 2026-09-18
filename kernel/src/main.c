@@ -13,6 +13,7 @@
 #include "serial.h"
 #include "scheduler.h"
 #include "shell.h"
+#include "userspace.h"
 
 static boot_context_t boot_context;
 
@@ -40,6 +41,10 @@ static __attribute__((noreturn)) void kernel_after_paging(void) {
         halt_forever();
     }
     serial_write("JOSHOS_SCHEDULER_OK\n");
+
+#ifdef JOSHOS_RING3_TEST
+    userspace_ring3_self_test();
+#endif
 
     heap_status_t heap_status = heap_kernel_init(&boot_context);
     if (heap_status != HEAP_OK) {
