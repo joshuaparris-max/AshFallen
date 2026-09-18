@@ -22,6 +22,7 @@ typedef struct {
 } __attribute__((packed)) idtr_t;
 
 extern const uintptr_t exception_stub_table[32];
+extern void syscall_entry(void);
 
 _Static_assert(__builtin_offsetof(exception_frame_t, rax) == 0, "exception frame rax offset");
 _Static_assert(__builtin_offsetof(exception_frame_t, r15) == 112, "exception frame r15 offset");
@@ -44,12 +45,12 @@ static uint16_t current_code_selector(void) {
     return selector;
 }
 
-static void idt_set_gate(uint8_t vector, uintptr_t handler, uint16_t selector, uint8_t ist) {
+static void idt_set_gate(uint8_t vector, uintptr_t handler, uint16_t selector, uint8_t ist, uint8_t dpl) {
     idt_entry_t *entry = &idt[vector];
     entry->offset_low = (uint16_t)(handler & 0xFFFFu);
     entry->selector = selector;
     entry->ist = ist & 0x07u;
-    entry->type_attr = IDT_GATE_INTERRUPT;
+    entry->type_attr = (uint8_t)(IDT_GATE_INTERRUPT | ((dpl & 0x03u) << 5));
     entry->offset_mid = (uint16_t)((handler >> 16) & 0xFFFFu);
     entry->offset_high = (uint32_t)((handler >> 32) & 0xFFFFFFFFu);
     entry->reserved = 0;
@@ -127,8 +128,9 @@ void interrupts_init(void) {
     uint16_t selector = current_code_selector();
     for (uint8_t vector = 0; vector < 32; ++vector) {
         uint8_t ist = vector == 8 ? GDT_DOUBLE_FAULT_IST_INDEX : 0;
-        idt_set_gate(vector, exception_stub_table[vector], selector, ist);
+        idt_set_gate(vector, exception_stub_table[vector], selector, ist, 0);
     }
+    idt_set_gate(0x80u, (uintptr_t)syscall_entry, selector, 0, 3);
 
     idtr_t idtr = {
         .limit = (uint16_t)(sizeof(idt) - 1),
