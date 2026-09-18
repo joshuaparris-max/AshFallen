@@ -75,7 +75,8 @@ HOST_TEST_PCI := obj-host/test_pci
 HOST_TEST_INPUT := obj-host/test_input
 HOST_TEST_TIMER := obj-host/test_timer
 HOST_TEST_KEYBOARD := obj-host/test_keyboard_decode
-HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET) $(HOST_TEST_NETDEV) $(HOST_TEST_SPINLOCK) $(HOST_TEST_ACPI) $(HOST_TEST_APIC_ROUTE) $(HOST_TEST_PCI) $(HOST_TEST_INPUT) $(HOST_TEST_TIMER) $(HOST_TEST_KEYBOARD)
+HOST_TEST_SMP := obj-host/test_smp_topology
+HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET) $(HOST_TEST_NETDEV) $(HOST_TEST_SPINLOCK) $(HOST_TEST_ACPI) $(HOST_TEST_APIC_ROUTE) $(HOST_TEST_PCI) $(HOST_TEST_INPUT) $(HOST_TEST_TIMER) $(HOST_TEST_KEYBOARD) $(HOST_TEST_SMP)
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -146,6 +147,10 @@ $(HOST_TEST_KEYBOARD): tests/test_keyboard_decode.c src/keyboard_decode.c src/ke
 	mkdir -p $(dir $@)
 	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_keyboard_decode.c src/keyboard_decode.c -o $@
 
+$(HOST_TEST_SMP): tests/test_smp_topology.c src/smp_topology.c src/smp.h src/acpi.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_smp_topology.c src/smp_topology.c -o $@
+
 host-tests: $(HOST_TESTS)
 	$(HOST_TEST_BOOT)
 	$(HOST_TEST_PMM)
@@ -160,6 +165,7 @@ host-tests: $(HOST_TESTS)
 	$(HOST_TEST_INPUT)
 	$(HOST_TEST_TIMER)
 	$(HOST_TEST_KEYBOARD)
+	$(HOST_TEST_SMP)
 
 clean:
 	rm -rf bin obj obj-host
