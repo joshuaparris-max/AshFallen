@@ -25,6 +25,7 @@ CFLAGS := \
 	-mno-sse \
 	-mno-sse2 \
 	-mno-red-zone \
+	-mgeneral-regs-only \
 	-mcmodel=kernel
 
 CPPFLAGS := \
@@ -34,6 +35,7 @@ CPPFLAGS := \
 	-isystem freestanding-c-hdrs/include \
 	-MMD \
 	-MP
+CPPFLAGS += $(EXTRA_CPPFLAGS)
 
 LDFLAGS := \
 	-target x86_64-unknown-none-elf \
