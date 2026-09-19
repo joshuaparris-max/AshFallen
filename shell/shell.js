@@ -293,6 +293,56 @@ var JoshOS = (function () {
     syncDock();
   }
 
+  function cycleFocus() {
+    var visible = state.windows.filter(function (w) { return w.state !== 'minimised'; });
+    if (!visible.length) return;
+    var index = visible.indexOf(state.focused);
+    focus(visible[(index + 1) % visible.length]);
+  }
+
+  function showLauncher() {
+    var existing = document.getElementById('command-palette');
+    if (existing) { existing.remove(); return; }
+    var host = document.createElement('div');
+    host.id = 'command-palette';
+    host.setAttribute('role', 'dialog');
+    host.setAttribute('aria-label', 'Josh OS launcher');
+    host.innerHTML = '<div class="palette-card"><input class="palette-input" aria-label="Search applications" placeholder="Search applications" autocomplete="off"><div class="palette-results"></div><div class="palette-hint">Enter to open · Escape to close</div></div>';
+    document.body.appendChild(host);
+    var input = host.querySelector('.palette-input');
+    var results = host.querySelector('.palette-results');
+    var selected = 0;
+    function draw() {
+      var query = input.value.trim().toLowerCase();
+      var matches = apps().filter(function (app) {
+        return !query || app.name.toLowerCase().indexOf(query) !== -1 || app.id.indexOf(query) !== -1;
+      });
+      results.innerHTML = '';
+      matches.forEach(function (app, index) {
+        var item = document.createElement('button');
+        item.className = 'palette-item' + (index === selected ? ' selected' : '');
+        item.textContent = (app.glyph ? app.glyph + '  ' : '') + app.name;
+        item.onclick = function () { openApp(app.id); host.remove(); };
+        results.appendChild(item);
+      });
+      selected = Math.min(selected, Math.max(0, matches.length - 1));
+    }
+    input.addEventListener('input', function () { selected = 0; draw(); });
+    input.addEventListener('keydown', function (e) {
+      var matches = apps().filter(function (app) {
+        var query = input.value.trim().toLowerCase();
+        return !query || app.name.toLowerCase().indexOf(query) !== -1 || app.id.indexOf(query) !== -1;
+      });
+      if (e.key === 'Escape') { host.remove(); return; }
+      if (e.key === 'ArrowDown') { e.preventDefault(); selected = Math.min(selected + 1, matches.length - 1); draw(); }
+      if (e.key === 'ArrowUp') { e.preventDefault(); selected = Math.max(selected - 1, 0); draw(); }
+      if (e.key === 'Enter' && matches[selected]) { openApp(matches[selected].id); host.remove(); }
+    });
+    host.addEventListener('mousedown', function (e) { if (e.target === host) host.remove(); });
+    draw();
+    input.focus();
+  }
+
   function notify(title, body) {
     var host = document.getElementById('notifications');
     var n = document.createElement('div');
@@ -353,6 +403,11 @@ var JoshOS = (function () {
     };
 
     document.addEventListener('keydown', function (e) {
+      if ((e.ctrlKey || e.metaKey) && e.code === 'Space') { e.preventDefault(); showLauncher(); return; }
+      if ((e.altKey || e.metaKey) && e.key === 'Tab') { e.preventDefault(); cycleFocus(); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'w' && state.focused) { e.preventDefault(); closeWindow(state.focused); return; }
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'm' && state.focused) { e.preventDefault(); minimise(state.focused); return; }
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key.toLowerCase() === 'f' && state.focused) { e.preventDefault(); toggleMaximise(state.focused); return; }
       if (e.key === 'Escape' && state.focused) closeWindow(state.focused);
     });
 
@@ -378,6 +433,7 @@ var JoshOS = (function () {
     wallpapers: WALLPAPERS,
     windows: function () { return state.windows.slice(); },
     apps: apps,
+    showLauncher: showLauncher,
     boot: boot
   };
 })();

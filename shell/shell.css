@@ -70,6 +70,31 @@ input, select, textarea { font: inherit; color: inherit; }
   z-index: 9000;
 }
 
+#command-palette {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  display: grid;
+  place-items: start center;
+  padding-top: 12vh;
+  background: rgba(0, 0, 0, .28);
+}
+
+.palette-card {
+  width: min(560px, calc(100vw - 32px));
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, .35);
+}
+
+.palette-input { width: 100%; box-sizing: border-box; padding: 12px; border: 1px solid var(--color-border); border-radius: var(--radius-md); background: var(--color-bg); color: var(--color-text); font: inherit; }
+.palette-results { display: grid; gap: 4px; margin-top: 10px; max-height: 40vh; overflow: auto; }
+.palette-item { padding: 10px; border: 0; border-radius: var(--radius-md); text-align: left; background: transparent; color: var(--color-text); font: inherit; cursor: pointer; }
+.palette-item.selected, .palette-item:hover { background: var(--color-accent); color: var(--color-accent-text); }
+.palette-hint { padding: 10px 4px 2px; color: var(--color-muted); font-size: .82rem; }
+
 .dock-item {
   width: 44px; height: 44px;
   display: grid;
