@@ -7,11 +7,12 @@ DOUBLE_FAULT_IMAGE := JoshOS-double-fault-test-x86_64
 DIVIDE_FAULT_IMAGE := JoshOS-divide-fault-test-x86_64
 PAGE_FAULT_IMAGE := JoshOS-page-fault-test-x86_64
 GP_FAULT_IMAGE := JoshOS-gp-fault-test-x86_64
+RING3_IMAGE := JoshOS-ring3-test-x86_64
 LIMINE_VERSION := 12.9.0
 LIMINE_SHA256 := 84059c93b4ea03994af6d614654c7095291388850ea7b258d64f9263abde5557
 LIMINE_URL := https://github.com/Limine-Bootloader/Limine/releases/download/v$(LIMINE_VERSION)/limine-binary.tar.gz
 
-.PHONY: all kernel host-tests run smoke keyboard-smoke fault-smoke clean distclean
+.PHONY: all kernel host-tests run smoke keyboard-smoke fault-smoke ring3-smoke clean distclean
 all: $(IMAGE).iso
 
 limine-binary.tar.gz:
@@ -153,9 +154,26 @@ fault-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
 	$(MAKE) -C kernel clean
 	rm -f double-fault-boot.log $(DOUBLE_FAULT_IMAGE).iso
 
+ring3-smoke: limine-binary/limine kernel/.deps-obtained limine.conf
+	$(MAKE) -C kernel clean
+	$(MAKE) IMAGE=$(RING3_IMAGE) EXTRA_CPPFLAGS=-DJOSHOS_RING3_TEST $(RING3_IMAGE).iso
+	rm -f ring3-boot.log
+	-timeout 10s qemu-system-x86_64 -M q35 -m 256M -cdrom $(RING3_IMAGE).iso -display none -serial stdio -no-reboot > ring3-boot.log 2>&1
+	cat ring3-boot.log
+	grep -q JOSHOS_SCHEDULER_OK ring3-boot.log
+	grep -q JOSHOS_USER_PAGING_OK ring3-boot.log
+	grep -q JOSHOS_RING3_ENTER ring3-boot.log
+	grep -q JOSHOS_RING3_SYSCALL_OK ring3-boot.log
+	grep -q JOSHOS_USERSPACE_HELLO ring3-boot.log
+	grep -q 'JOSHOS_USERSPACE_EXIT_STATUS=0x0000000000000000' ring3-boot.log
+	grep -q JOSHOS_USERSPACE_EXIT_OK ring3-boot.log
+	@echo "Josh OS Ring 3 syscall smoke test passed."
+	$(MAKE) -C kernel clean
+	rm -f ring3-boot.log $(RING3_IMAGE).iso
+
 clean:
 	$(MAKE) -C kernel clean
-	rm -rf iso_root boot.log keyboard-smoke.log keyboard-smoke.monitor fault-boot.log divide-fault-boot.log page-fault-boot.log gp-fault-boot.log double-fault-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DIVIDE_FAULT_IMAGE).iso $(PAGE_FAULT_IMAGE).iso $(GP_FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso
+	rm -rf iso_root boot.log keyboard-smoke.log keyboard-smoke.monitor fault-boot.log divide-fault-boot.log page-fault-boot.log gp-fault-boot.log double-fault-boot.log ring3-boot.log $(IMAGE).iso $(FAULT_IMAGE).iso $(DIVIDE_FAULT_IMAGE).iso $(PAGE_FAULT_IMAGE).iso $(GP_FAULT_IMAGE).iso $(DOUBLE_FAULT_IMAGE).iso $(RING3_IMAGE).iso
 
 distclean:
 	$(MAKE) -C kernel distclean
