@@ -7,6 +7,7 @@
 #define PAGE_MASK UINT64_C(0x000ffffffffff000)
 #define PAGE_PRESENT UINT64_C(0x001)
 #define PAGE_RW UINT64_C(0x002)
+#define PAGE_USER UINT64_C(0x004)
 #define PAGE_PWT UINT64_C(0x008)
 #define PAGE_PCD UINT64_C(0x010)
 #define PAGE_PS UINT64_C(0x080)
@@ -16,6 +17,8 @@
 #define MMIO_BASE UINT64_C(0xffffc00000000000)
 #define MMIO_LIMIT UINT64_C(0xffffc00040000000)
 #define TEMP_MAP_BASE UINT64_C(0xffffd00000000000)
+#define USER_MAP_BASE UINT64_C(0x0000400000000000)
+#define USER_MAP_LIMIT UINT64_C(0x0000800000000000)
 
 extern char __text_start[];
 extern char __text_end[];
@@ -221,6 +224,75 @@ static paging_status_t map_4k_flags(
         return PAGING_MAPPING_CONFLICT;
     }
     *pte = wanted;
+    return PAGING_OK;
+}
+
+static paging_status_t ensure_user_table(
+    const boot_context_t *boot,
+    uint64_t table_phys,
+    uint16_t index,
+    uint64_t *next_phys_out
+) {
+    uint64_t *table = (uint64_t *)phys_ptr(boot, table_phys);
+    if (!table || !next_phys_out) return PAGING_UNSUPPORTED_LAYOUT;
+
+    uint64_t entry = table[index];
+    if (entry & PAGE_PRESENT) {
+        if ((entry & PAGE_PS) != 0 || (entry & PAGE_USER) == 0) {
+            return PAGING_MAPPING_CONFLICT;
+        }
+        *next_phys_out = entry & PAGE_MASK;
+        return PAGING_OK;
+    }
+
+    uint64_t next_phys;
+    paging_status_t status = alloc_table(boot, &next_phys);
+    if (status != PAGING_OK) return status;
+
+    table[index] = next_phys | PAGE_PRESENT | PAGE_RW | PAGE_USER;
+    *next_phys_out = next_phys;
+    return PAGING_OK;
+}
+
+static paging_status_t map_user_4k(
+    const boot_context_t *boot,
+    uint64_t root_phys,
+    uint64_t virt,
+    uint64_t phys,
+    int writable,
+    int executable
+) {
+    if ((virt & (PAGE_SIZE - 1u)) != 0 ||
+        (phys & (PAGE_SIZE - 1u)) != 0 ||
+        virt < USER_MAP_BASE || virt >= USER_MAP_LIMIT) {
+        return PAGING_UNSUPPORTED_LAYOUT;
+    }
+
+    uint64_t pdpt_phys;
+    paging_status_t status = ensure_user_table(
+        boot, root_phys, (uint16_t)((virt >> 39) & 0x1ffu), &pdpt_phys);
+    if (status != PAGING_OK) return status;
+
+    uint64_t pd_phys;
+    status = ensure_user_table(
+        boot, pdpt_phys, (uint16_t)((virt >> 30) & 0x1ffu), &pd_phys);
+    if (status != PAGING_OK) return status;
+
+    uint64_t pt_phys;
+    status = ensure_user_table(
+        boot, pd_phys, (uint16_t)((virt >> 21) & 0x1ffu), &pt_phys);
+    if (status != PAGING_OK) return status;
+
+    uint64_t *pt = (uint64_t *)phys_ptr(boot, pt_phys);
+    if (!pt) return PAGING_UNSUPPORTED_LAYOUT;
+
+    uint16_t index = (uint16_t)((virt >> 12) & 0x1ffu);
+    uint64_t wanted = phys | PAGE_PRESENT | PAGE_USER;
+    if (writable) wanted |= PAGE_RW;
+    if (!executable) wanted |= PAGE_NX;
+
+    if (pt[index] & PAGE_PRESENT) return PAGING_MAPPING_CONFLICT;
+    pt[index] = wanted;
     return PAGING_OK;
 }
 
@@ -487,6 +559,7 @@ static int query_root(
     mapping->executable = 0;
     mapping->huge = 0;
     mapping->cache_disabled = 0;
+    mapping->user = 0;
 
     uint64_t *pml4 = (uint64_t *)phys_ptr(boot, root_phys);
     if (!pml4) return 0;
@@ -509,6 +582,9 @@ static int query_root(
         mapping->writable = (e3 & PAGE_RW) != 0;
         mapping->executable = (e3 & PAGE_NX) == 0;
         mapping->cache_disabled = (e3 & PAGE_PCD) != 0;
+        mapping->user = ((e1 & PAGE_USER) != 0) &&
+                        ((e2 & PAGE_USER) != 0) &&
+                        ((e3 & PAGE_USER) != 0);
         mapping->physical_address =
             (e3 & PAGE_MASK) + (virt & (HUGE_PAGE_SIZE - 1u));
         return 1;
@@ -523,6 +599,10 @@ static int query_root(
     mapping->writable = (e4 & PAGE_RW) != 0;
     mapping->executable = (e4 & PAGE_NX) == 0;
     mapping->cache_disabled = (e4 & PAGE_PCD) != 0;
+    mapping->user = ((e1 & PAGE_USER) != 0) &&
+                    ((e2 & PAGE_USER) != 0) &&
+                    ((e3 & PAGE_USER) != 0) &&
+                    ((e4 & PAGE_USER) != 0);
     mapping->physical_address =
         (e4 & PAGE_MASK) + (virt & (PAGE_SIZE - 1u));
     return 1;
@@ -561,6 +641,76 @@ int paging_verify_kernel_layout(void) {
            !guard_low.present && !guard_high.present &&
            framebuffer.present && framebuffer.writable &&
            !framebuffer.executable;
+}
+
+paging_status_t paging_create_user_address_space(paging_address_space_t *space_out) {
+    if (!active_boot || !kernel_space.root_phys || !space_out) {
+        return PAGING_BAD_ARGUMENT;
+    }
+
+    uint64_t root_phys;
+    paging_status_t status = alloc_table(active_boot, &root_phys);
+    if (status != PAGING_OK) return status;
+
+    uint64_t *kernel_root =
+        (uint64_t *)phys_ptr(active_boot, kernel_space.root_phys);
+    uint64_t *user_root = (uint64_t *)phys_ptr(active_boot, root_phys);
+    if (!kernel_root || !user_root) return PAGING_UNSUPPORTED_LAYOUT;
+
+    /*
+     * Copy the kernel's supervisor mappings, then build U/S mappings only in
+     * the dedicated user window. ensure_user_table() refuses to promote an
+     * inherited supervisor branch to user-accessible.
+     */
+    for (uint32_t i = 0; i < 512u; ++i) user_root[i] = kernel_root[i];
+
+    space_out->root_phys = root_phys;
+    return PAGING_OK;
+}
+
+paging_status_t paging_map_user_page(const paging_address_space_t *space,
+                                     uint64_t virtual_address,
+                                     uint64_t physical_address,
+                                     int writable,
+                                     int executable) {
+    if (!active_boot || !space || !space->root_phys) return PAGING_BAD_ARGUMENT;
+    return map_user_4k(active_boot, space->root_phys, virtual_address,
+                       physical_address, writable, executable);
+}
+
+int paging_query_address_space(const paging_address_space_t *space,
+                               uint64_t virtual_address,
+                               paging_mapping_t *mapping) {
+    if (!active_boot || !space || !space->root_phys) return 0;
+    return query_root(active_boot, space->root_phys, virtual_address, mapping);
+}
+
+int paging_user_range_accessible(uint64_t root_phys,
+                                 uint64_t address,
+                                 uint64_t length,
+                                 int writable) {
+    if (!active_boot || !root_phys || length == 0 ||
+        address < USER_MAP_BASE || address >= USER_MAP_LIMIT ||
+        UINT64_MAX - address < length ||
+        address + length > USER_MAP_LIMIT) {
+        return 0;
+    }
+
+    uint64_t first = align_down(address, PAGE_SIZE);
+    uint64_t last = align_down(address + length - 1u, PAGE_SIZE);
+    for (uint64_t page = first;; page += PAGE_SIZE) {
+        paging_mapping_t mapping;
+        if (!query_root(active_boot, root_phys, page, &mapping) ||
+            !mapping.present || !mapping.user ||
+            (writable && !mapping.writable)) {
+            return 0;
+        }
+
+        if (page == last) break;
+        if (UINT64_MAX - page < PAGE_SIZE) return 0;
+    }
+
+    return 1;
 }
 
 void *paging_direct_pointer(uint64_t physical_address) {
