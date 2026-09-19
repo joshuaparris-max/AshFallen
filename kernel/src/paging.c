@@ -668,6 +668,76 @@ paging_status_t paging_create_user_address_space(paging_address_space_t *space_o
     return PAGING_OK;
 }
 
+paging_status_t paging_destroy_user_address_space(paging_address_space_t *space) {
+    if (!active_boot || !space || !space->root_phys ||
+        space->root_phys == kernel_space.root_phys) {
+        return PAGING_BAD_ARGUMENT;
+    }
+
+    uint64_t *root = (uint64_t *)phys_ptr(active_boot, space->root_phys);
+    if (!root) return PAGING_UNSUPPORTED_LAYOUT;
+
+    /*
+     * The supported user window spans lower-half PML4 slots 128..255.
+     * Those branches are created exclusively by map_user_4k(). Leaf frames
+     * belong to the process manager; this function frees only paging frames.
+     */
+    for (uint32_t i = 128u; i < 256u; ++i) {
+        uint64_t e1 = root[i];
+        if ((e1 & PAGE_PRESENT) == 0) continue;
+        if ((e1 & PAGE_USER) == 0 || (e1 & PAGE_PS) != 0) {
+            return PAGING_MAPPING_CONFLICT;
+        }
+
+        uint64_t pdpt_phys = e1 & PAGE_MASK;
+        uint64_t *pdpt = (uint64_t *)phys_ptr(active_boot, pdpt_phys);
+        if (!pdpt) return PAGING_UNSUPPORTED_LAYOUT;
+
+        for (uint32_t j = 0; j < 512u; ++j) {
+            uint64_t e2 = pdpt[j];
+            if ((e2 & PAGE_PRESENT) == 0) continue;
+            if ((e2 & PAGE_USER) == 0 || (e2 & PAGE_PS) != 0) {
+                return PAGING_MAPPING_CONFLICT;
+            }
+
+            uint64_t pd_phys = e2 & PAGE_MASK;
+            uint64_t *pd = (uint64_t *)phys_ptr(active_boot, pd_phys);
+            if (!pd) return PAGING_UNSUPPORTED_LAYOUT;
+
+            for (uint32_t k = 0; k < 512u; ++k) {
+                uint64_t e3 = pd[k];
+                if ((e3 & PAGE_PRESENT) == 0) continue;
+                if ((e3 & PAGE_USER) == 0 || (e3 & PAGE_PS) != 0) {
+                    return PAGING_MAPPING_CONFLICT;
+                }
+
+                uint64_t pt_phys = e3 & PAGE_MASK;
+                if (pmm_free_frame(pt_phys) != PMM_OK) {
+                    return PAGING_UNSUPPORTED_LAYOUT;
+                }
+                pd[k] = 0;
+            }
+
+            if (pmm_free_frame(pd_phys) != PMM_OK) {
+                return PAGING_UNSUPPORTED_LAYOUT;
+            }
+            pdpt[j] = 0;
+        }
+
+        if (pmm_free_frame(pdpt_phys) != PMM_OK) {
+            return PAGING_UNSUPPORTED_LAYOUT;
+        }
+        root[i] = 0;
+    }
+
+    uint64_t root_phys = space->root_phys;
+    space->root_phys = 0;
+    if (pmm_free_frame(root_phys) != PMM_OK) {
+        return PAGING_UNSUPPORTED_LAYOUT;
+    }
+    return PAGING_OK;
+}
+
 paging_status_t paging_map_user_page(const paging_address_space_t *space,
                                      uint64_t virtual_address,
                                      uint64_t physical_address,
