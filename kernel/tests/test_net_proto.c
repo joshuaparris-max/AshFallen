@@ -199,6 +199,10 @@ int main(void) {
     test_tcp();
     test_dhcp();
     test_dns();
+    for (int status = JOSH_NET_OK; status <= JOSH_NET_ERR_BUFFER; ++status) {
+        assert(josh_net_status_string((josh_net_status_t)status) != NULL);
+    }
+    assert(josh_net_status_string((josh_net_status_t)999) != NULL);
     puts("native network protocol tests passed");
     return 0;
 }
