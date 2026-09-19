@@ -36,7 +36,7 @@ Use this machine to drive concrete early decisions, but keep hardware-specific q
 
 The Josh-owned `boot_context_t` now preserves framebuffer data, a bounded internal memory-map representation, usable-memory accounting and firmware-table pointers without leaking Limine structures into the rest of the kernel. Josh Boot Protocol entries are range-checked for overflow, zero-length entries are discarded, and unknown/reserved memory is kept non-usable by default.
 
-AshFallen CI run `35345674776` passed the host protocol tests plus the Limine boot path at commit `2c65821`. JoshBIOS cross-repo run `35345724402` checked out that exact AshFallen commit and booted it through the JoshBootloader path to `JOSHOS_BOOT_OK`.
+JoshOS CI run `35345674776` passed the host protocol tests plus the Limine boot path at commit `2c65821`. JoshBIOS cross-repo run `35345724402` checked out that exact JoshOS commit and booted it through the JoshBootloader path to `JOSHOS_BOOT_OK`.
 
 ### Exit test
 
@@ -92,7 +92,7 @@ Requirements:
 
 The current range-based allocator consumes the sanitised boot memory map, excludes the low 1 MiB bootstrap area, removes kernel/framebuffer ranges explicitly and treats non-usable/ACPI regions as unavailable. JoshBootloader's live boot structures are below the allocator floor; Limine bootloader/firmware regions remain non-usable through the adapter. Host tests exercise reservation boundaries, alignment, invalid frees, double-free detection, accounting and a 4096-frame allocate/free stress cycle.
 
-AshFallen CI run `35395723343` booted through Limine with the allocator and the first Josh-owned paging handoff. JoshBIOS cross-repo run `35395898854` then loaded the same kernel from FAT32 and reached `JOSHOS_PAGING_OWNED_OK` and `JOSHOS_BOOT_OK`.
+JoshOS CI run `35395723343` booted through Limine with the allocator and the first Josh-owned paging handoff. JoshBIOS cross-repo run `35395898854` then loaded the same kernel from FAT32 and reached `JOSHOS_PAGING_OWNED_OK` and `JOSHOS_BOOT_OK`.
 
 ---
 

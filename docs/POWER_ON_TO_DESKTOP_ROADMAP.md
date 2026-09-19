@@ -16,7 +16,7 @@ It is intentionally broader than the kernel roadmap. The goal is to make every l
 | Desktop/product | this repository | compositor, shell, launcher, settings, apps, first-run and recovery UX |
 | Stage-0 compatibility extraction | `Parris-Tech-Services/JoshOS-Stage0` | fast product prototyping and ArchISO compatibility image |
 
-The small kernel in the JoshBIOS repository is only a boot-stack payload. **The canonical native Josh kernel is `AshFallen/kernel`.**
+The small kernel in the JoshBIOS repository is only a boot-stack payload. **The canonical native Josh kernel is `JoshOS/kernel`.**
 
 ## One boot story
 
@@ -509,7 +509,7 @@ Maintain an explicit matrix for each tested machine:
 ## Milestone A — define the seam
 
 - [ ] Write Josh Boot Protocol v0 structure.
-- [ ] Add protocol-version checking to the AshFallen kernel.
+- [ ] Add protocol-version checking to the JoshOS kernel.
 - [ ] Document required vs optional fields.
 - [ ] Add protocol conformance fixtures/tests.
 
@@ -521,7 +521,7 @@ Maintain an explicit matrix for each tested machine:
 - [ ] memory-map hand-off.
 - [ ] ACPI pointer hand-off.
 - [ ] serial diagnostics.
-- [ ] boot AshFallen kernel in QEMU without Limine.
+- [ ] boot JoshOS kernel in QEMU without Limine.
 
 Limine remains a supported/reference boot path until JoshBootloader reaches equivalent reliability.
 

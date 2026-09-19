@@ -95,4 +95,4 @@ The experimental Josh Boot Protocol v0 path now provides enough information to b
 - UEFI parity;
 - physical-hardware validation.
 
-AshFallen already has `boot_josh.c` beside `boot_limine.c`, and CI proves the same kernel reaches `JOSHOS_BOOT_OK` through either the Limine reference path or the legacy-BIOS JoshBootloader path.
+JoshOS already has `boot_josh.c` beside `boot_limine.c`, and CI proves the same kernel reaches `JOSHOS_BOOT_OK` through either the Limine reference path or the legacy-BIOS JoshBootloader path.
