@@ -65,7 +65,7 @@ The goal is **not** to fork the kernel for each bootloader. Boot protocols are a
 
 On 18 September 2026, the JoshBIOS repository gained a tested x86-64 UEFI entry scaffold. Its `BOOTX64.EFI` is built into a FAT removable-media image and exercised under QEMU/OVMF; the smoke test requires the `JOSHUEFI_ENTRY_OK` serial marker.
 
-That UEFI path still does **not** load AshFallen. The integrated JoshBootloader path is currently legacy BIOS only; UEFI still needs GOP, UEFI memory-map capture, `ExitBootServices`, filesystem/kernel loading and the Josh Boot Protocol hand-off.
+That UEFI path still does **not** load JoshOS. The integrated JoshBootloader path is currently legacy BIOS only; UEFI still needs GOP, UEFI memory-map capture, `ExitBootServices`, filesystem/kernel loading and the Josh Boot Protocol hand-off.
 
 ## From the power button to the desktop
 
