@@ -44,14 +44,15 @@ cp -a "$ARCHISO_PROFILE" "$GENERATED_PROFILE"
 
 packages=(
   alsa-utils
+  bubblewrap
   ca-certificates
   ca-certificates-mozilla
   chromium
   curl
-  gnome-keyring
-  sof-firmware
-  mesa-utils
   ffmpeg
+  git
+  github-cli
+  gnome-keyring
   intel-media-driver
   iproute2
   iw
@@ -62,10 +63,12 @@ packages=(
   lightdm-gtk-greeter
   linux-firmware
   mesa
+  mesa-utils
   networkmanager
   nodejs
   noto-fonts
   openbox
+  openssh
   openssl
   pipewire
   pipewire-alsa
@@ -73,6 +76,9 @@ packages=(
   pipewire-pulse
   procps-ng
   python
+  ripgrep
+  sof-firmware
+  sxhkd
   ttf-dejavu
   vulkan-intel
   vulkan-radeon
@@ -83,6 +89,7 @@ packages=(
   xorg-xrandr
   xorg-xset
   xorg-xsetroot
+  xterm
 )
 
 for package in "${packages[@]}"; do
@@ -113,6 +120,7 @@ iso_name="josh-os"
 iso_publisher="Josh OS <https://github.com/joshuaparris-max/AshFallen>"
 iso_application="Josh OS Stage 0 Live"
 file_permissions["/usr/local/bin/josh-os-session"]="0:0:0755"
+file_permissions["/usr/local/bin/josh-dev"]="0:0:0755"
 file_permissions["/usr/local/bin/josh-audio"]="0:0:0755"
 file_permissions["/usr/local/bin/josh-os-browser"]="0:0:0755"
 file_permissions["/usr/local/bin/josh-os-browser-diagnostics"]="0:0:0755"
