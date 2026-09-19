@@ -140,7 +140,7 @@ PR #3 (real Wayland session ADR) was subsequently green on branch run
 | Main SHA | Workflow | Run | Status |
 |---|---|---:|---|
 | `9c467a1fb504` | `Build Josh OS ISO` | `35413957824` | **green** after PR #4 |
-| `ac0cee4d3bea` | `Build Josh OS ISO` | `35415425150` | **in progress** after PR #3 at this snapshot |
+| `ac0cee4d3bea` | `Build Josh OS ISO` | `35415425150` | **green** after PR #3 |
 
 #### Open PRs
 
@@ -229,7 +229,7 @@ Only the three labels below are used.
 | Ring 3/process isolation/syscalls | **Implemented-unverified** | #26 green on its head but currently non-mergeable/behind current main. |
 | Userspace ELF validation | **Implemented-unverified** | #27 green on its head but currently non-mergeable/behind current main. |
 | Native full userspace/init/services | **Not started** | No merged general process/init/service system. |
-| Stage0 live ISO network smoke | **Merged+green** | PR #4 green run `35413006500`; post-merge main proof to be inserted after run completes. |
+| Stage0 live ISO network smoke | **Merged+green** | PR #4 head run `35413006500` green; post-merge main run `35413957824` green; post-ADR main run `35415425150` also green. |
 | Real Stage0 Wayland session | **Not started** | ADR selects labwc/greetd/XWayland/Waybar/Fuzzel; implementation not yet landed. |
 | Firefox base browser | **Not started** | Decision made; existing image is still Chromium-based until migration lands. |
 | Browser persistence/media/audio/download/crash harness | **Implemented-unverified** | Substantive Chromium implementation is merged, but the contract must be adapted to Firefox and the current Product ISO workflow is not green yet. |
@@ -280,7 +280,7 @@ This section is authoritative until those documents are edited.
 ## Sequenced merge/re-cut plan
 
 1. **Stage0 PR #4 matcher/harness** — merged and post-merge green (`Build Josh OS ISO` run `35413957824`).
-2. **Stage0 ADR #3 / real-Wayland decision** — merged as `ac0cee4`; post-merge run `35415425150` must finish green before further Stage0 docs land.
+2. **Stage0 ADR #3 / real-Wayland decision** — merged as `ac0cee4`; post-merge `Build Josh OS ISO` run `35415425150` is green.
 3. **Stage0 ADR integration commit** — after that run is green, make ADR numbering unique: 0002 real Wayland, 0003 low-spec Gen5, 0004 Firefox, 0005 design tokens. No feature code.
 4. **Shared status document + README links** — land this document in canonical JoshOS and link it from all three READMEs.
 5. **Stage0 repo-rename PR #5** — because it overlaps README/roadmap/build-script text, re-cut it on top of the integration/doc commits rather than racing those files.
