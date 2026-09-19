@@ -25,7 +25,7 @@ printf '%s\n' "$*" > "$JOSH_DEV_TEST_CALL"
 SH
 chmod +x "$TMP/bin/pacman" "$TMP/bin/sudo"
 
-bash -n bash "$JOSH_DEV"
+bash -n "$JOSH_DEV"
 bash "$JOSH_DEV" --help >/dev/null
 bash "$JOSH_DEV" enable --ephemeral --workspace "$TMP/workspace" >/dev/null
 status_output="$(bash "$JOSH_DEV" status)"
