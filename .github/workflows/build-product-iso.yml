@@ -11,6 +11,15 @@ on:
       - 'scripts/**'
       - 'shell/**'
 
+  pull_request:
+    branches: [main]
+    paths:
+      - '.github/workflows/build-product-iso.yml'
+      - 'design/**'
+      - 'iso/**'
+      - 'scripts/**'
+      - 'shell/**'
+
 permissions:
   contents: read
 
@@ -34,6 +43,8 @@ jobs:
           bash -n scripts/check-network-platform.sh
           bash -n scripts/check-product-browser.sh
           bash -n iso/overlay/usr/local/bin/josh-os-session
+          bash -n iso/overlay/usr/local/bin/josh-dev
+          bash -n scripts/test-developer-mode.sh
           bash -n iso/overlay/usr/local/bin/josh-os-browser
           bash -n iso/overlay/usr/local/bin/josh-os-browser-diagnostics
           bash -n iso/overlay/usr/local/bin/josh-youtube-acceptance
@@ -47,6 +58,10 @@ jobs:
           bash -n iso/overlay/usr/local/lib/josh-os/browser-ready-probe
           bash -n iso/overlay/usr/local/lib/josh-os/browser-media-probe
           bash -n scripts/smoke-product-browser.sh
+          bash scripts/test-developer-mode.sh
+          grep -q 'https://chatgpt.com/codex/install.sh' iso/overlay/usr/local/bin/josh-dev
+          grep -q 'https://claude.ai/install.sh' iso/overlay/usr/local/bin/josh-dev
+          grep -q 'https://antigravity.google/cli/install.sh' iso/overlay/usr/local/bin/josh-dev
 
       - name: Build ISO in Arch Linux
         run: |

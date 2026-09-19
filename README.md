@@ -36,6 +36,7 @@ It now includes:
 - a shared design-token system;
 - an ArchISO pipeline that boots the Josh desktop full-screen in Chromium kiosk mode;
 - a Stage 0 internet platform using NetworkManager for DHCP/Wi-Fi/IPv4/IPv6, systemd-resolved for DNS, systemd-timesyncd for clock sync, system CA certificates for TLS, plus `josh-wifi` and `josh-network-check` diagnostics.
+- an opt-in Developer Mode (`josh-dev`) that installs Codex CLI, Claude Code and Antigravity CLI on demand, isolates AI changes in Git worktrees, verifies them, and can build a candidate next product ISO without replacing the running system.
 
 GitHub Actions builds this as the **JoshOS-Stage0-Live-x86_64** artifact.
 
@@ -161,4 +162,5 @@ The Stage 0 product ISO is intentionally a compatibility vehicle: ArchISO + Ligh
 - [Product-track roadmap](docs/product/ROADMAP.md)
 - [Design principles](docs/DESIGN_PRINCIPLES.md)
 - [VirtualBox product ISO test](docs/VIRTUALBOX.md)
+- [Developer Mode](docs/developer-mode.md)
 - [Architecture decisions](docs/decisions/)

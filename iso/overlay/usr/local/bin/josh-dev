@@ -1,0 +1,564 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PROGRAM="josh-dev"
+CONFIG_DIR="${JOSH_DEV_CONFIG_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/josh-os-dev}"
+STATE_DIR="${JOSH_DEV_STATE_DIR:-${XDG_STATE_HOME:-$HOME/.local/state}/josh-os-dev}"
+CONFIG_FILE="$CONFIG_DIR/config"
+REPOS_FILE="${JOSH_DEV_REPOS_FILE:-/etc/josh-os/developer-repos.conf}"
+RULES_FILE="${JOSH_DEV_RULES_FILE:-/etc/josh-os/developer-agent-rules.md}"
+DEFAULT_WORKSPACE="$HOME/Development/JoshOS"
+
+usage() {
+  cat <<'USAGE'
+Josh OS Developer Mode
+
+Usage:
+  josh-dev status
+  josh-dev enable [--workspace PATH] [--ephemeral]
+  josh-dev disable
+  josh-dev install-toolchain
+  josh-dev install-agents [codex|claude|antigravity|all]
+  josh-dev sync [repo]
+  josh-dev improve <repo> --agent <codex|claude|antigravity> -- <task>
+  josh-dev verify <repo-or-task-id>
+  josh-dev stage <task-id>
+  josh-dev publish <task-id>
+  josh-dev list
+
+Repository keys: ashfallen, joshbios, stage0
+
+Safety model:
+  * AI changes happen in a dedicated Git worktree and branch, never in the
+    checked-out base clone or the running OS image.
+  * Verification is separate from generation.
+  * Publication is explicit and only allowed after verification passes.
+  * Product-repo tasks can build a candidate next ISO; this command never
+    replaces the currently running system.
+USAGE
+}
+
+die() { printf '%s: %s\n' "$PROGRAM" "$*" >&2; exit 1; }
+info() { printf '%s\n' "$*"; }
+
+load_config() {
+  WORKSPACE="$DEFAULT_WORKSPACE"
+  if [[ -f "$CONFIG_FILE" ]]; then
+    while IFS='=' read -r key value; do
+      case "$key" in
+        WORKSPACE) WORKSPACE="$value" ;;
+      esac
+    done < "$CONFIG_FILE"
+  fi
+}
+
+save_config() {
+  mkdir -p "$CONFIG_DIR"
+  printf 'WORKSPACE=%s\n' "$WORKSPACE" > "$CONFIG_FILE"
+  chmod 600 "$CONFIG_FILE"
+}
+
+is_enabled() { [[ -f "$STATE_DIR/enabled" ]]; }
+require_enabled() { is_enabled || die "Developer Mode is disabled. Run: josh-dev enable"; }
+
+fs_type_for() {
+  local target="$1"
+  findmnt -n -T "$target" -o FSTYPE 2>/dev/null | head -n1 || true
+}
+
+is_volatile_fs() {
+  case "$1" in
+    overlay|squashfs|tmpfs|ramfs) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+repo_url() {
+  local wanted="$1"
+  awk -F'|' -v key="$wanted" '$1 == key { print $3; exit }' "$REPOS_FILE"
+}
+
+repo_owner() {
+  local wanted="$1"
+  awk -F'|' -v key="$wanted" '$1 == key { print $2; exit }' "$REPOS_FILE"
+}
+
+validate_repo_key() {
+  local key="$1" url
+  [[ -f "$REPOS_FILE" ]] || die "repository manifest missing: $REPOS_FILE"
+  url="$(repo_url "$key")"
+  [[ -n "$url" ]] || die "unknown repository key: $key"
+}
+
+repo_path() { printf '%s/repos/%s\n' "$WORKSPACE" "$1"; }
+
+command_path() {
+  local name="$1" candidate
+  if command -v "$name" >/dev/null 2>&1; then
+    command -v "$name"
+    return 0
+  fi
+  for candidate in \
+    "$HOME/.local/bin/$name" \
+    "$HOME/.local/share/agy/bin/$name" \
+    "$HOME/.claude/local/bin/$name"
+  do
+    if [[ -x "$candidate" ]]; then printf '%s\n' "$candidate"; return 0; fi
+  done
+  return 1
+}
+
+version_line() {
+  local name="$1" path
+  if path="$(command_path "$name" 2>/dev/null)"; then
+    local version
+    version="$("$path" --version 2>/dev/null | head -n1 || true)"
+    printf '%-12s %s%s\n' "$name:" "installed" "${version:+ ($version)}"
+  else
+    printf '%-12s %s\n' "$name:" "not installed"
+  fi
+}
+
+cmd_status() {
+  load_config
+  local fs="missing"
+  [[ -e "$WORKSPACE" ]] && fs="$(fs_type_for "$WORKSPACE")"
+  info "Josh OS Developer Mode"
+  if is_enabled; then info "Developer Mode: enabled"; else info "Developer Mode: disabled"; fi
+  info "Workspace:      $WORKSPACE"
+  info "Filesystem:     ${fs:-unknown}"
+  if [[ -n "$fs" ]] && is_volatile_fs "$fs"; then
+    info "Persistence:    volatile (changes can disappear on reboot)"
+  elif [[ "$fs" != "missing" ]]; then
+    info "Persistence:    filesystem is not a known live/temporary type"
+  else
+    info "Persistence:    workspace has not been created"
+  fi
+  info ""
+  version_line git
+  version_line gh
+  version_line codex
+  version_line claude
+  version_line agy
+  version_line qemu-system-x86_64
+  version_line mkarchiso
+}
+
+cmd_enable() {
+  load_config
+  local allow_ephemeral=0
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --workspace) [[ $# -ge 2 ]] || die "--workspace requires a path"; WORKSPACE="$2"; shift 2 ;;
+      --ephemeral) allow_ephemeral=1; shift ;;
+      *) die "unknown enable option: $1" ;;
+    esac
+  done
+
+  mkdir -p "$WORKSPACE" "$STATE_DIR/tasks" "$STATE_DIR/logs"
+  local fs
+  fs="$(fs_type_for "$WORKSPACE")"
+  if is_volatile_fs "$fs" && [[ "$allow_ephemeral" -ne 1 ]]; then
+    rmdir "$WORKSPACE" 2>/dev/null || true
+    die "workspace is on '$fs', so it will not survive a live-ISO reboot. Mount persistent storage and use --workspace PATH, or explicitly use --ephemeral for a throw-away session."
+  fi
+  save_config
+  touch "$STATE_DIR/enabled"
+  chmod 600 "$STATE_DIR/enabled"
+  info "Developer Mode enabled."
+  info "Workspace: $WORKSPACE"
+  if is_volatile_fs "$fs"; then
+    info "WARNING: this session is explicitly ephemeral."
+  fi
+  info "Next: josh-dev install-toolchain"
+  info "Then: josh-dev install-agents all && josh-dev sync"
+}
+
+cmd_disable() {
+  rm -f "$STATE_DIR/enabled"
+  info "Developer Mode disabled. Existing workspaces and credentials were left untouched."
+}
+
+run_official_installer() {
+  local label="$1" url="$2" shell="$3"
+  info "Installing/updating $label from its official installer:"
+  info "  $url"
+  curl --fail --show-error --silent --location "$url" | "$shell"
+  hash -r || true
+}
+
+cmd_install_toolchain() {
+  require_enabled
+  command -v pacman >/dev/null 2>&1 || die "this Josh OS Developer Mode toolchain installer currently supports the Arch-based product image"
+  local packages=(
+    archiso base-devel bubblewrap clang edk2-ovmf fd git github-cli jq lld
+    nasm npm openssh python-pip qemu-img qemu-system-x86 ripgrep rsync rust
+    tmux xorriso
+  )
+  info "Installing/updating the Josh OS development toolchain with pacman."
+  info "This is an explicit system change and may download a substantial amount of data."
+  sudo pacman -Syu --needed "${packages[@]}"
+}
+
+cmd_install_agents() {
+  require_enabled
+  local which="${1:-all}"
+  case "$which" in
+    codex)
+      run_official_installer "Codex CLI" "https://chatgpt.com/codex/install.sh" sh
+      ;;
+    claude)
+      run_official_installer "Claude Code" "https://claude.ai/install.sh" bash
+      ;;
+    antigravity|agy)
+      run_official_installer "Antigravity CLI" "https://antigravity.google/cli/install.sh" bash
+      ;;
+    all)
+      cmd_install_agents codex
+      cmd_install_agents claude
+      cmd_install_agents antigravity
+      ;;
+    *) die "expected codex, claude, antigravity, or all" ;;
+  esac
+}
+
+sync_one() {
+  local key="$1" path url
+  validate_repo_key "$key"
+  path="$(repo_path "$key")"
+  url="$(repo_url "$key")"
+  mkdir -p "$WORKSPACE/repos"
+  if [[ -d "$path/.git" ]]; then
+    info "Fetching $key..."
+    git -C "$path" fetch --prune origin
+  elif [[ -e "$path" ]]; then
+    die "$path exists but is not a Git clone"
+  else
+    info "Cloning $key ($(repo_owner "$key"))..."
+    git clone "$url" "$path"
+  fi
+}
+
+cmd_sync() {
+  require_enabled
+  load_config
+  if [[ $# -gt 0 ]]; then
+    sync_one "$1"
+  else
+    local key
+    while IFS='|' read -r key _owner _url; do
+      [[ -z "$key" || "$key" == \#* ]] && continue
+      sync_one "$key"
+    done < "$REPOS_FILE"
+  fi
+}
+
+base_ref_for() {
+  local path="$1"
+  if git -C "$path" show-ref --verify --quiet refs/remotes/origin/main; then
+    printf '%s\n' origin/main
+  else
+    local remote_head
+    remote_head="$(git -C "$path" symbolic-ref -q --short refs/remotes/origin/HEAD 2>/dev/null || true)"
+    [[ -n "$remote_head" ]] && { printf '%s\n' "$remote_head"; return; }
+    printf '%s\n' HEAD
+  fi
+}
+
+create_task_record() {
+  local id="$1" key="$2" agent="$3" worktree="$4" branch="$5" status="$6"
+  mkdir -p "$STATE_DIR/tasks"
+  cat > "$STATE_DIR/tasks/$id" <<RECORD
+id=$id
+repo=$key
+agent=$agent
+worktree=$worktree
+branch=$branch
+status=$status
+RECORD
+}
+
+record_get() {
+  local id="$1" wanted="$2"
+  local file="$STATE_DIR/tasks/$id"
+  [[ -f "$file" ]] || return 1
+  awk -F'=' -v key="$wanted" '$1 == key { sub(/^[^=]*=/, ""); print; exit }' "$file"
+}
+
+record_set_status() {
+  local id="$1" value="$2" file="$STATE_DIR/tasks/$id"
+  [[ -f "$file" ]] || die "task not found: $id"
+  awk -F'=' -v value="$value" 'BEGIN{OFS="="} $1=="status" {$2=value} {print}' "$file" > "$file.tmp"
+  mv "$file.tmp" "$file"
+}
+
+agent_prompt() {
+  local key="$1" task="$2"
+  cat "$RULES_FILE"
+  cat <<PROMPT
+
+# Current task
+Repository key: $key
+Repository ownership: $(repo_owner "$key")
+
+User task:
+$task
+
+Inspect the implementation first. Make the smallest coherent change that genuinely improves the requested behaviour. Work only inside this worktree. Do not push or merge. Run relevant tests before finishing and report limitations truthfully.
+PROMPT
+}
+
+run_agent() {
+  local agent="$1" prompt="$2" path
+  case "$agent" in
+    codex)
+      path="$(command_path codex)" || die "Codex CLI is not installed. Run: josh-dev install-agents codex"
+      "$path" exec --sandbox workspace-write "$prompt"
+      ;;
+    claude)
+      path="$(command_path claude)" || die "Claude Code is not installed. Run: josh-dev install-agents claude"
+      # Interactive mode preserves Claude Code's normal permission prompts.
+      "$path" "$prompt"
+      ;;
+    antigravity|agy)
+      path="$(command_path agy)" || die "Antigravity CLI is not installed. Run: josh-dev install-agents antigravity"
+      # Antigravity's documented print mode is useful for automation. We do not
+      # pass its dangerous permission-bypass flag.
+      "$path" -p "$prompt"
+      ;;
+    *) die "unknown agent: $agent" ;;
+  esac
+}
+
+verify_path() {
+  local key="$1" path="$2"
+  [[ -d "$path/.git" || -f "$path/.git" ]] || die "not a Git worktree: $path"
+
+  info "Checking whitespace/errors in Git diff..."
+  git -C "$path" diff --check
+
+  case "$key" in
+    stage0)
+      info "Verifying Stage0 shell generators..."
+      (cd "$path" && node scripts/build-tokens.mjs && node scripts/build-shell.mjs)
+      bash -n "$path/scripts/build-iso.sh"
+      if [[ -d /usr/share/archiso/configs/releng ]]; then
+        info "Preparing ArchISO profile (structure check)..."
+        (cd "$path" && ./scripts/build-iso.sh --prepare-only)
+      else
+        info "NOTE: archiso releng profile unavailable; ISO profile preparation skipped."
+      fi
+      ;;
+    ashfallen)
+      info "Verifying AshFallen product assets..."
+      (cd "$path" && node scripts/build-tokens.mjs && node scripts/build-shell.mjs)
+      bash -n "$path/scripts/build-iso.sh"
+      [[ -x "$path/scripts/test-josh-audio.sh" ]] && (cd "$path" && ./scripts/test-josh-audio.sh)
+      if [[ -f "$path/GNUmakefile" ]]; then
+        info "Running AshFallen native-kernel host tests..."
+        (cd "$path" && make -f GNUmakefile host-tests)
+      fi
+      if [[ -d /usr/share/archiso/configs/releng ]]; then
+        info "Preparing canonical product ArchISO profile (structure check)..."
+        (cd "$path" && ./scripts/build-iso.sh --prepare-only)
+      else
+        info "NOTE: archiso releng profile unavailable; product ISO profile preparation skipped."
+      fi
+      ;;
+    joshbios)
+      # Prefer repository-owned verification entry points rather than freezing a
+      # second build system in Developer Mode.
+      if [[ -x "$path/scripts/test.sh" ]]; then
+        (cd "$path" && ./scripts/test.sh)
+      elif [[ -x "$path/test.sh" ]]; then
+        (cd "$path" && ./test.sh)
+      elif [[ -f "$path/Cargo.toml" ]]; then
+        (cd "$path" && cargo test --workspace)
+      elif [[ -f "$path/Makefile" ]] && grep -Eq '^test:' "$path/Makefile"; then
+        (cd "$path" && make test)
+      else
+        info "NOTE: no recognised repository-owned test entry point found; only git diff --check ran."
+      fi
+      ;;
+    *) die "cannot verify unknown repo key: $key" ;;
+  esac
+}
+
+cmd_improve() {
+  require_enabled
+  load_config
+  [[ $# -ge 1 ]] || die "usage: josh-dev improve <repo> --agent <agent> -- <task>"
+  local key="$1"; shift
+  validate_repo_key "$key"
+  local agent="" task=""
+  while [[ $# -gt 0 ]]; do
+    case "$1" in
+      --agent) [[ $# -ge 2 ]] || die "--agent requires a value"; agent="$2"; shift 2 ;;
+      --) shift; task="$*"; break ;;
+      *) die "unexpected improve argument: $1" ;;
+    esac
+  done
+  [[ -n "$agent" ]] || die "--agent is required"
+  [[ -n "$task" ]] || die "task text is required after --"
+
+  sync_one "$key"
+  local base_path base_ref id branch worktree prompt log
+  base_path="$(repo_path "$key")"
+  [[ -z "$(git -C "$base_path" status --porcelain)" ]] || die "base clone has local changes; clean it before creating an AI worktree"
+  base_ref="$(base_ref_for "$base_path")"
+  id="$(date -u +%Y%m%dT%H%M%SZ)-${key}-${agent}"
+  branch="ai/$id"
+  worktree="$WORKSPACE/worktrees/$key/$id"
+  mkdir -p "$(dirname "$worktree")" "$STATE_DIR/logs"
+  git -C "$base_path" worktree add -b "$branch" "$worktree" "$base_ref"
+  create_task_record "$id" "$key" "$agent" "$worktree" "$branch" running
+  prompt="$(agent_prompt "$key" "$task")"
+  log="$STATE_DIR/logs/$id.log"
+
+  info "Task:      $id"
+  info "Worktree:  $worktree"
+  info "Branch:    $branch"
+  info "Agent:     $agent"
+  info ""
+
+  local agent_status
+  set +e
+  if [[ "$agent" == "claude" ]]; then
+    # Claude Code's interactive permission UI needs a real terminal. Do not
+    # pipe it through tee; verification output is still captured below.
+    (cd "$worktree" && run_agent "$agent" "$prompt")
+    agent_status=$?
+  else
+    (cd "$worktree" && run_agent "$agent" "$prompt") 2>&1 | tee "$log"
+    agent_status=${PIPESTATUS[0]}
+  fi
+  set -e
+  if [[ "$agent_status" -ne 0 ]]; then
+    record_set_status "$id" agent-failed
+    die "agent exited with status $agent_status; worktree kept for inspection: $worktree"
+  fi
+
+  info ""
+  info "Agent finished. Running verification..."
+  if verify_path "$key" "$worktree" 2>&1 | tee -a "$log"; then
+    record_set_status "$id" verified
+    info "VERIFIED TASK: $id"
+    info "Review the diff, then use: josh-dev publish $id"
+    if [[ "$key" == "stage0" || "$key" == "ashfallen" ]]; then
+      info "Or build a candidate ISO first: josh-dev stage $id"
+    fi
+  else
+    record_set_status "$id" verification-failed
+    die "verification failed; task preserved as $id"
+  fi
+}
+
+resolve_repo_or_task() {
+  local arg="$1"
+  if [[ -f "$STATE_DIR/tasks/$arg" ]]; then
+    local key path
+    key="$(record_get "$arg" repo)"
+    path="$(record_get "$arg" worktree)"
+    printf '%s|%s|%s\n' "$key" "$path" "$arg"
+    return
+  fi
+  validate_repo_key "$arg"
+  printf '%s|%s|\n' "$arg" "$(repo_path "$arg")"
+}
+
+cmd_verify() {
+  require_enabled
+  load_config
+  [[ $# -eq 1 ]] || die "usage: josh-dev verify <repo-or-task-id>"
+  local resolved key path id
+  resolved="$(resolve_repo_or_task "$1")"
+  IFS='|' read -r key path id <<< "$resolved"
+  [[ -e "$path" ]] || die "path does not exist: $path (run josh-dev sync first)"
+  if verify_path "$key" "$path"; then
+    [[ -n "$id" ]] && record_set_status "$id" verified
+    info "Verification passed."
+  else
+    [[ -n "$id" ]] && record_set_status "$id" verification-failed
+    return 1
+  fi
+}
+
+cmd_stage() {
+  require_enabled
+  load_config
+  [[ $# -eq 1 ]] || die "usage: josh-dev stage <task-id>"
+  local id="$1" key path status candidate_dir newest
+  key="$(record_get "$id" repo)" || die "task not found: $id"
+  path="$(record_get "$id" worktree)"
+  status="$(record_get "$id" status)"
+  [[ "$status" == verified || "$status" == staged ]] || die "task must be verified before staging (current status: $status)"
+  [[ "$key" == stage0 || "$key" == ashfallen ]] || die "candidate OS image staging is implemented only for the product repositories (ashfallen or stage0)"
+  [[ -x "$path/scripts/build-iso.sh" ]] || die "product ISO builder missing in task worktree"
+  command -v mkarchiso >/dev/null 2>&1 || die "mkarchiso is unavailable; install/build from a Developer Mode ISO that includes archiso"
+
+  info "Building candidate ISO from verified worktree..."
+  (cd "$path" && sudo ./scripts/build-iso.sh)
+  newest="$(find "$path/out" -maxdepth 1 -type f -name 'josh-os-*.iso' -printf '%T@ %p\n' | sort -nr | head -n1 | cut -d' ' -f2-)"
+  [[ -n "$newest" ]] || die "ISO build completed without producing josh-os-*.iso"
+  candidate_dir="$WORKSPACE/candidates/$id"
+  mkdir -p "$candidate_dir"
+  cp -f "$newest" "$candidate_dir/"
+  (cd "$candidate_dir" && sha256sum "$(basename "$newest")" > SHA256SUMS)
+  record_set_status "$id" staged
+  info "Candidate staged: $candidate_dir/$(basename "$newest")"
+  info "The running OS was NOT replaced. Boot/test this candidate separately before promotion."
+}
+
+cmd_publish() {
+  require_enabled
+  load_config
+  [[ $# -eq 1 ]] || die "usage: josh-dev publish <task-id>"
+  local id="$1" path branch status
+  path="$(record_get "$id" worktree)" || die "task not found: $id"
+  branch="$(record_get "$id" branch)"
+  status="$(record_get "$id" status)"
+  [[ "$status" == verified || "$status" == staged || "$status" == published ]] || die "task must pass verification before publication (current status: $status)"
+  [[ -z "$(git -C "$path" status --porcelain)" ]] || die "worktree has uncommitted changes. Review and commit them before publishing."
+  git -C "$path" push -u origin "$branch"
+  record_set_status "$id" published
+  info "Published branch: $branch"
+  info "No merge was performed. Review it through your normal GitHub workflow."
+}
+
+cmd_list() {
+  mkdir -p "$STATE_DIR/tasks"
+  local file found=0
+  printf '%-42s %-12s %-12s %s\n' "TASK" "REPO" "AGENT" "STATUS"
+  for file in "$STATE_DIR"/tasks/*; do
+    [[ -f "$file" ]] || continue
+    found=1
+    printf '%-42s %-12s %-12s %s\n' \
+      "$(basename "$file")" \
+      "$(record_get "$(basename "$file")" repo)" \
+      "$(record_get "$(basename "$file")" agent)" \
+      "$(record_get "$(basename "$file")" status)"
+  done
+  [[ "$found" -eq 1 ]] || info "(no tasks yet)"
+}
+
+main() {
+  local command="${1:-help}"
+  [[ $# -gt 0 ]] && shift || true
+  case "$command" in
+    status) cmd_status "$@" ;;
+    enable) cmd_enable "$@" ;;
+    disable) cmd_disable "$@" ;;
+    install-toolchain) cmd_install_toolchain "$@" ;;
+    install-agents) cmd_install_agents "$@" ;;
+    sync) cmd_sync "$@" ;;
+    improve) cmd_improve "$@" ;;
+    verify) cmd_verify "$@" ;;
+    stage) cmd_stage "$@" ;;
+    publish) cmd_publish "$@" ;;
+    list) cmd_list "$@" ;;
+    help|-h|--help) usage ;;
+    *) usage >&2; die "unknown command: $command" ;;
+  esac
+}
+
+main "$@"

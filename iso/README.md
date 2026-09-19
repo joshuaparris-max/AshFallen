@@ -37,6 +37,19 @@ The **Build Josh OS Product ISO** workflow builds inside a privileged Arch Linux
 container and uploads `JoshOS-Stage0-Live-x86_64` as a workflow artifact. It
 also publishes a `SHA256SUMS` file beside the ISO.
 
+## Developer Mode
+
+The product image includes an opt-in real terminal and the `josh-dev` command.
+Press **Ctrl+Alt+T** or **Super+Enter**, then use `josh-dev enable` to begin.
+Developer Mode can install the build/QEMU toolchain plus Codex CLI, Claude Code
+and Antigravity CLI, clone the three Josh repositories, run an agent in an
+isolated Git worktree, verify the result and build a candidate product ISO.
+
+It does not replace the running OS or automatically merge/publish AI changes.
+On a live image, use persistent storage for the Developer Mode workspace unless
+you deliberately opt into an ephemeral session. See
+[Developer Mode](../docs/developer-mode.md).
+
 ## VirtualBox
 
 Create a VM with:

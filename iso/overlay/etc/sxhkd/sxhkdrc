@@ -1,0 +1,7 @@
+# Open a real Linux terminal. The browser Terminal app is intentionally only a UI
+# prototype; Developer Mode always runs in a real shell.
+ctrl + alt + t
+  xterm -fa Monospace -fs 11 -title "Josh OS Developer Terminal" -e bash -lc 'josh-dev status; echo; exec bash -l'
+
+super + Return
+  xterm -fa Monospace -fs 11 -title "Josh OS Developer Terminal" -e bash -lc 'josh-dev status; echo; exec bash -l'
