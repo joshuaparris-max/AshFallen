@@ -109,6 +109,10 @@ uint64_t cpu_read_cr3(void) {
     return value;
 }
 
+void cpu_write_cr3(uint64_t root_phys) {
+    __asm__ volatile ("mov %0, %%cr3" :: "r"(root_phys) : "memory");
+}
+
 uint64_t cpu_read_tsc(void) {
     uint32_t low;
     uint32_t high;
