@@ -25,12 +25,12 @@ printf '%s\n' "$*" > "$JOSH_DEV_TEST_CALL"
 SH
 chmod +x "$TMP/bin/pacman" "$TMP/bin/sudo"
 
-bash -n "$JOSH_DEV"
-"$JOSH_DEV" --help >/dev/null
-"$JOSH_DEV" enable --ephemeral --workspace "$TMP/workspace" >/dev/null
-status_output="$("$JOSH_DEV" status)"
+bash -n bash "$JOSH_DEV"
+bash "$JOSH_DEV" --help >/dev/null
+bash "$JOSH_DEV" enable --ephemeral --workspace "$TMP/workspace" >/dev/null
+status_output="$(bash "$JOSH_DEV" status)"
 grep -q 'Developer Mode: enabled' <<< "$status_output"
-"$JOSH_DEV" install-toolchain >/dev/null
+bash "$JOSH_DEV" install-toolchain >/dev/null
 grep -q 'pacman -Syu --needed' "$JOSH_DEV_TEST_CALL"
 grep -q 'archiso' "$JOSH_DEV_TEST_CALL"
 grep -q 'qemu-system-x86' "$JOSH_DEV_TEST_CALL"
@@ -59,10 +59,10 @@ git -C "$TMP/source" commit -qm 'initial'
 git clone -q --bare "$TMP/source" "$TMP/origin.git"
 printf 'stage0|linux-product-prototype|file://%s\n' "$TMP/origin.git" > "$JOSH_DEV_REPOS_FILE"
 
-"$JOSH_DEV" sync stage0 >/dev/null
+bash "$JOSH_DEV" sync stage0 >/dev/null
 [[ -f "$TMP/workspace/repos/stage0/value.txt" ]]
 
-if "$JOSH_DEV" sync does-not-exist >/dev/null 2>&1; then
+if bash "$JOSH_DEV" sync does-not-exist >/dev/null 2>&1; then
   echo 'sync should reject an unknown repository key' >&2
   exit 1
 fi
@@ -79,14 +79,14 @@ fi
 printf 'changed by fixture agent\n' >> value.txt
 SH
 chmod +x "$TMP/bin/codex"
-improve_output="$("$JOSH_DEV" improve stage0 --agent codex -- 'make a tested change')"
+improve_output="$(bash "$JOSH_DEV" improve stage0 --agent codex -- 'make a tested change')"
 grep -q 'VERIFIED TASK:' <<< "$improve_output"
 grep -q 'changed by fixture agent' "$TMP/workspace"/worktrees/stage0/*/value.txt
-list_output="$("$JOSH_DEV" list)"
+list_output="$(bash "$JOSH_DEV" list)"
 grep -q 'verified' <<< "$list_output"
 
-"$JOSH_DEV" disable >/dev/null
-if "$JOSH_DEV" sync stage0 >/dev/null 2>&1; then
+bash "$JOSH_DEV" disable >/dev/null
+if bash "$JOSH_DEV" sync stage0 >/dev/null 2>&1; then
   echo 'sync should fail when Developer Mode is disabled' >&2
   exit 1
 fi
