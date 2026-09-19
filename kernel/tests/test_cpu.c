@@ -44,6 +44,9 @@ int main(void) {
         7, UINT32_C(0x80000008), leaf1, leaf7, ext1, ext7);
     expect("APIC required", !cpu_required_features_present(&f));
 
+    cpu_features_t detected = cpu_detect();
+    expect("host CPUID detection", detected.max_basic_leaf >= 1);
+
     if (failures) return 1;
     puts("CPU feature decode tests passed");
     return 0;
