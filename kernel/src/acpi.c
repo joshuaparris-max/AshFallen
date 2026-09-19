@@ -105,6 +105,45 @@ static acpi_status_t append_cpu(
     return ACPI_OK;
 }
 
+static acpi_status_t parse_madt_entry(
+    uint8_t type,
+    const unsigned char *entry,
+    uint8_t entry_length,
+    acpi_platform_info_t *info
+) {
+    if (type == 0 && entry_length >= 8) {
+        return append_cpu(
+            info, entry[2], entry[3], read_le32(entry + 4), 0);
+    }
+    if (type == 1 && entry_length >= 12) {
+        if (info->ioapic_count >= ACPI_MAX_IOAPICS) return ACPI_TOO_MANY_ENTRIES;
+        acpi_ioapic_info_t *io = &info->ioapics[info->ioapic_count++];
+        io->id = entry[2];
+        io->physical_address = read_le32(entry + 4);
+        io->gsi_base = read_le32(entry + 8);
+        return ACPI_OK;
+    }
+    if (type == 2 && entry_length >= 10) {
+        if (entry[2] != 0) return ACPI_OK;
+        if (info->override_count >= ACPI_MAX_ISO) return ACPI_TOO_MANY_ENTRIES;
+        acpi_irq_override_t *override = &info->overrides[info->override_count++];
+        override->source_irq = entry[3];
+        override->gsi = read_le32(entry + 4);
+        override->flags = read_le16(entry + 8);
+        return ACPI_OK;
+    }
+    if (type == 5 && entry_length >= 12) {
+        info->local_apic_address = read_le64(entry + 4);
+        return ACPI_OK;
+    }
+    if (type == 9 && entry_length >= 16) {
+        return append_cpu(
+            info, read_le32(entry + 12), read_le32(entry + 4),
+            read_le32(entry + 8), 1);
+    }
+    return ACPI_OK;
+}
+
 static acpi_status_t parse_madt(
     uint64_t physical,
     acpi_reader_fn reader,
@@ -152,47 +191,8 @@ static acpi_status_t parse_madt(
             return ACPI_READ_ERROR;
         }
 
-        if (type == 0 && entry_length >= 8) {
-            status = append_cpu(
-                info,
-                entry[2],
-                entry[3],
-                read_le32(entry + 4),
-                0
-            );
-            if (status != ACPI_OK) return status;
-        } else if (type == 1 && entry_length >= 12) {
-            if (info->ioapic_count >= ACPI_MAX_IOAPICS) {
-                return ACPI_TOO_MANY_ENTRIES;
-            }
-            acpi_ioapic_info_t *io =
-                &info->ioapics[info->ioapic_count++];
-            io->id = entry[2];
-            io->physical_address = read_le32(entry + 4);
-            io->gsi_base = read_le32(entry + 8);
-        } else if (type == 2 && entry_length >= 10) {
-            if (entry[2] == 0) {
-                if (info->override_count >= ACPI_MAX_ISO) {
-                    return ACPI_TOO_MANY_ENTRIES;
-                }
-                acpi_irq_override_t *override =
-                    &info->overrides[info->override_count++];
-                override->source_irq = entry[3];
-                override->gsi = read_le32(entry + 4);
-                override->flags = read_le16(entry + 8);
-            }
-        } else if (type == 5 && entry_length >= 12) {
-            info->local_apic_address = read_le64(entry + 4);
-        } else if (type == 9 && entry_length >= 16) {
-            status = append_cpu(
-                info,
-                read_le32(entry + 12),
-                read_le32(entry + 4),
-                read_le32(entry + 8),
-                1
-            );
-            if (status != ACPI_OK) return status;
-        }
+        status = parse_madt_entry(type, entry, entry_length, info);
+        if (status != ACPI_OK) return status;
 
         offset += entry_length;
     }
