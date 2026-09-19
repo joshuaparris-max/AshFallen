@@ -421,9 +421,17 @@ cmd_improve() {
   info "Agent:     $agent"
   info ""
 
+  local agent_status
   set +e
-  (cd "$worktree" && run_agent "$agent" "$prompt") 2>&1 | tee "$log"
-  local agent_status=${PIPESTATUS[0]}
+  if [[ "$agent" == "claude" ]]; then
+    # Claude Code's interactive permission UI needs a real terminal. Do not
+    # pipe it through tee; verification output is still captured below.
+    (cd "$worktree" && run_agent "$agent" "$prompt")
+    agent_status=$?
+  else
+    (cd "$worktree" && run_agent "$agent" "$prompt") 2>&1 | tee "$log"
+    agent_status=${PIPESTATUS[0]}
+  fi
   set -e
   if [[ "$agent_status" -ne 0 ]]; then
     record_set_status "$id" agent-failed
@@ -485,7 +493,7 @@ cmd_stage() {
   status="$(record_get "$id" status)"
   [[ "$status" == verified || "$status" == staged ]] || die "task must be verified before staging (current status: $status)"
   [[ "$key" == stage0 || "$key" == ashfallen ]] || die "candidate OS image staging is implemented only for the product repositories (ashfallen or stage0)"
-  [[ -x "$path/scripts/build-iso.sh" ]] || die "Stage0 ISO builder missing in task worktree"
+  [[ -x "$path/scripts/build-iso.sh" ]] || die "product ISO builder missing in task worktree"
   command -v mkarchiso >/dev/null 2>&1 || die "mkarchiso is unavailable; install/build from a Developer Mode ISO that includes archiso"
 
   info "Building candidate ISO from verified worktree..."
