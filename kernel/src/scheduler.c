@@ -1,16 +1,23 @@
 #include "scheduler.h"
+#include "cpu.h"
+#include "gdt.h"
+#include "paging.h"
 #include "serial.h"
 #include <stddef.h>
 #include <stdint.h>
 
 #define KERNEL_THREAD_STACK_SIZE 16384u
 #define SCHEDULER_BOOTSTRAP_ID UINT64_C(1)
+#define CR3_ADDRESS_MASK UINT64_C(0x000ffffffffff000)
 
 typedef struct thread {
     uint64_t saved_rsp;
     uint64_t id;
     thread_state_t state;
     uint64_t switches;
+    uint64_t address_space_root;
+    uint64_t kernel_stack_top;
+    uint8_t user_mode;
     thread_entry_t entry;
     void *argument;
     uint8_t stack[KERNEL_THREAD_STACK_SIZE] __attribute__((aligned(16)));
@@ -43,6 +50,7 @@ static __attribute__((noreturn)) void thread_trampoline(void) {
 static uint64_t prepare_initial_stack(thread_t *thread) {
     uintptr_t top = (uintptr_t)(thread->stack + sizeof(thread->stack));
     top &= ~(uintptr_t)0x0fu;
+    thread->kernel_stack_top = (uint64_t)top;
     top -= sizeof(uint64_t); /* SysV function-entry RSP is 8 mod 16. */
 
     uint64_t *stack = (uint64_t *)top;
@@ -99,6 +107,9 @@ void scheduler_init(void) {
         threads[i].id = 0;
         threads[i].saved_rsp = 0;
         threads[i].switches = 0;
+        threads[i].address_space_root = 0;
+        threads[i].kernel_stack_top = 0;
+        threads[i].user_mode = 0;
         threads[i].entry = 0;
         threads[i].argument = 0;
     }
@@ -107,6 +118,9 @@ void scheduler_init(void) {
     bootstrap_thread.id = SCHEDULER_BOOTSTRAP_ID;
     bootstrap_thread.state = THREAD_RUNNING;
     bootstrap_thread.switches = 0;
+    bootstrap_thread.address_space_root = cpu_read_cr3() & CR3_ADDRESS_MASK;
+    bootstrap_thread.kernel_stack_top = 0;
+    bootstrap_thread.user_mode = 0;
     bootstrap_thread.entry = 0;
     bootstrap_thread.argument = 0;
 
@@ -115,8 +129,12 @@ void scheduler_init(void) {
     scan_cursor = 1; /* slot 0 is the currently running bootstrap thread */
 }
 
-int scheduler_create_kernel_thread(thread_entry_t entry, void *argument, uint64_t *thread_id_out) {
-    if (!entry) return 0;
+static int create_thread(thread_entry_t entry,
+                         void *argument,
+                         uint64_t address_space_root,
+                         int user_mode,
+                         uint64_t *thread_id_out) {
+    if (!entry || address_space_root == 0) return 0;
 
     for (uint32_t i = 0; i < SCHEDULER_MAX_THREADS; ++i) {
         if (threads[i].state != THREAD_UNUSED && threads[i].state != THREAD_DEAD) continue;
@@ -125,6 +143,8 @@ int scheduler_create_kernel_thread(thread_entry_t entry, void *argument, uint64_
         thread->id = next_id++;
         thread->state = THREAD_READY;
         thread->switches = 0;
+        thread->address_space_root = address_space_root & CR3_ADDRESS_MASK;
+        thread->user_mode = user_mode ? 1u : 0u;
         thread->entry = entry;
         thread->argument = argument;
         thread->saved_rsp = prepare_initial_stack(thread);
@@ -134,6 +154,21 @@ int scheduler_create_kernel_thread(thread_entry_t entry, void *argument, uint64_
     }
 
     return 0;
+}
+
+int scheduler_create_kernel_thread(thread_entry_t entry,
+                                   void *argument,
+                                   uint64_t *thread_id_out) {
+    uint64_t root = paging_current_root();
+    if (root == 0) root = cpu_read_cr3() & CR3_ADDRESS_MASK;
+    return create_thread(entry, argument, root, 0, thread_id_out);
+}
+
+int scheduler_create_user_thread(thread_entry_t entry,
+                                 void *argument,
+                                 uint64_t address_space_root,
+                                 uint64_t *thread_id_out) {
+    return create_thread(entry, argument, address_space_root, 1, thread_id_out);
 }
 
 void scheduler_yield(void) {
@@ -156,11 +191,36 @@ void scheduler_yield(void) {
     next->state = THREAD_RUNNING;
     next->switches++;
     current = next;
+
+    uint64_t next_root = next->address_space_root & CR3_ADDRESS_MASK;
+    uint64_t active_root = cpu_read_cr3() & CR3_ADDRESS_MASK;
+    if (next_root != active_root) {
+        cpu_write_cr3(next_root);
+    }
+
+    if (next->user_mode && next->kernel_stack_top != 0) {
+        gdt_set_kernel_stack(next->kernel_stack_top);
+    }
+
     context_switch(&previous->saved_rsp, next->saved_rsp);
+}
+
+__attribute__((noreturn)) void scheduler_exit_current(void) {
+    if (!current || current == &bootstrap_thread) {
+        serial_write("JOSHOS_ERROR_BOOTSTRAP_EXIT\n");
+        for (;;) __asm__ volatile ("cli; hlt");
+    }
+
+    current->state = THREAD_DEAD;
+    for (;;) scheduler_yield();
 }
 
 uint64_t scheduler_current_thread_id(void) {
     return current ? current->id : 0;
+}
+
+uint64_t scheduler_current_address_space(void) {
+    return current ? current->address_space_root : 0;
 }
 
 uint32_t scheduler_live_thread_count(void) {
@@ -181,6 +241,8 @@ int scheduler_thread_info(uint64_t thread_id, thread_info_t *info_out) {
     info_out->id = thread->id;
     info_out->state = thread->state;
     info_out->switches = thread->switches;
+    info_out->address_space_root = thread->address_space_root;
+    info_out->user_mode = thread->user_mode;
     return 1;
 }
 
