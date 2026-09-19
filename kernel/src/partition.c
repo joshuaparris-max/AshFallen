@@ -57,64 +57,105 @@ static partition_status_t read_sector(const block_device_t *device, uint64_t lba
         ? PARTITION_OK : PARTITION_IO_ERROR;
 }
 
-static partition_status_t parse_gpt(const block_device_t *device, partition_table_t *table) {
-    if (read_sector(device, 1, sector_buffer) != PARTITION_OK) return PARTITION_IO_ERROR;
+static int gpt_signature_valid(void) {
     static const uint8_t signature[8] = {'E','F','I',' ','P','A','R','T'};
-    for (uint32_t i = 0; i < 8; ++i) if (sector_buffer[i] != signature[i]) return PARTITION_BAD_GPT;
+    for (uint32_t i = 0; i < 8; ++i) {
+        if (sector_buffer[i] != signature[i]) return 0;
+    }
+    return 1;
+}
+
+static partition_status_t validate_gpt_header(
+    const block_device_t *device,
+    uint64_t *first_usable,
+    uint64_t *last_usable,
+    uint64_t *entries_lba,
+    uint32_t *entry_count,
+    uint32_t *entry_size,
+    uint32_t *entries_crc
+) {
+    if (!gpt_signature_valid()) return PARTITION_BAD_GPT;
 
     uint32_t header_size = le32(sector_buffer + 12);
     uint32_t stored_crc = le32(sector_buffer + 16);
-    if (header_size < 92u || header_size > device->sector_size || header_size > PARTITION_MAX_SECTOR) {
-        return PARTITION_BAD_GPT;
-    }
+    if (header_size < 92u) return PARTITION_BAD_GPT;
+    if (header_size > device->sector_size) return PARTITION_BAD_GPT;
+    if (header_size > PARTITION_MAX_SECTOR) return PARTITION_BAD_GPT;
 
     uint8_t header_copy[PARTITION_MAX_SECTOR];
     for (uint32_t i = 0; i < header_size; ++i) header_copy[i] = sector_buffer[i];
     header_copy[16] = header_copy[17] = header_copy[18] = header_copy[19] = 0;
-    if (crc32_update(0, header_copy, header_size) != stored_crc) return PARTITION_BAD_GPT;
-
-    uint64_t current_lba = le64(sector_buffer + 24);
-    uint64_t first_usable = le64(sector_buffer + 40);
-    uint64_t last_usable = le64(sector_buffer + 48);
-    uint64_t entries_lba = le64(sector_buffer + 72);
-    uint32_t entry_count = le32(sector_buffer + 80);
-    uint32_t entry_size = le32(sector_buffer + 84);
-    uint32_t entries_crc = le32(sector_buffer + 88);
-
-    if (current_lba != 1 || first_usable > last_usable ||
-        entry_count == 0 || entry_count > GPT_ENTRY_MAX_COUNT ||
-        entry_size < 128u || entry_size > GPT_ENTRY_MAX_SIZE || (entry_size & 7u) != 0) {
+    if (crc32_update(0, header_copy, header_size) != stored_crc) {
         return PARTITION_BAD_GPT;
     }
 
+    if (le64(sector_buffer + 24) != 1) return PARTITION_BAD_GPT;
+    *first_usable = le64(sector_buffer + 40);
+    *last_usable = le64(sector_buffer + 48);
+    *entries_lba = le64(sector_buffer + 72);
+    *entry_count = le32(sector_buffer + 80);
+    *entry_size = le32(sector_buffer + 84);
+    *entries_crc = le32(sector_buffer + 88);
+
+    if (*first_usable > *last_usable) return PARTITION_BAD_GPT;
+    if (*entry_count == 0 || *entry_count > GPT_ENTRY_MAX_COUNT) return PARTITION_BAD_GPT;
+    if (*entry_size < 128u || *entry_size > GPT_ENTRY_MAX_SIZE) return PARTITION_BAD_GPT;
+    if ((*entry_size & 7u) != 0) return PARTITION_BAD_GPT;
+    return PARTITION_OK;
+}
+
+static partition_status_t load_gpt_entries(
+    const block_device_t *device,
+    uint64_t entries_lba,
+    uint32_t entry_count,
+    uint32_t entry_size,
+    uint32_t expected_crc
+) {
     uint64_t table_bytes64 = (uint64_t)entry_count * entry_size;
     if (table_bytes64 > GPT_TABLE_MAX_BYTES) return PARTITION_BAD_GPT;
     uint32_t table_bytes = (uint32_t)table_bytes64;
     uint32_t sectors = (table_bytes + device->sector_size - 1u) / device->sector_size;
-    if (entries_lba >= device->sector_count || sectors == 0 ||
-        (uint64_t)sectors > device->sector_count - entries_lba) return PARTITION_BAD_GPT;
+    if (entries_lba >= device->sector_count) return PARTITION_BAD_GPT;
+    if (sectors == 0) return PARTITION_BAD_GPT;
+    if ((uint64_t)sectors > device->sector_count - entries_lba) return PARTITION_BAD_GPT;
 
     uint32_t copied = 0;
     for (uint32_t s = 0; s < sectors; ++s) {
-        if (read_sector(device, entries_lba + s, sector_buffer) != PARTITION_OK) return PARTITION_IO_ERROR;
+        if (read_sector(device, entries_lba + s, sector_buffer) != PARTITION_OK) {
+            return PARTITION_IO_ERROR;
+        }
         uint32_t remaining = table_bytes - copied;
         uint32_t take = remaining < device->sector_size ? remaining : device->sector_size;
-        for (uint32_t i = 0; i < take; ++i) gpt_entries[copied + i] = sector_buffer[i];
+        for (uint32_t i = 0; i < take; ++i) {
+            gpt_entries[copied + i] = sector_buffer[i];
+        }
         copied += take;
     }
-    if (crc32_update(0, gpt_entries, table_bytes) != entries_crc) return PARTITION_BAD_GPT;
+    return crc32_update(0, gpt_entries, table_bytes) == expected_crc
+        ? PARTITION_OK : PARTITION_BAD_GPT;
+}
 
+static partition_status_t populate_gpt_table(
+    const block_device_t *device,
+    partition_table_t *table,
+    uint64_t first_usable,
+    uint64_t last_usable,
+    uint32_t entry_count,
+    uint32_t entry_size
+) {
     table->scheme = PARTITION_SCHEME_GPT;
     table->count = 0;
     for (uint32_t i = 0; i < entry_count; ++i) {
         const uint8_t *entry = gpt_entries + (uint64_t)i * entry_size;
         if (guid_is_zero(entry)) continue;
+
         uint64_t first = le64(entry + 32);
         uint64_t last = le64(entry + 40);
-        if (first > last || first < first_usable || last > last_usable || last >= device->sector_count) {
-            return PARTITION_BAD_GPT;
-        }
+        if (first > last) return PARTITION_BAD_GPT;
+        if (first < first_usable || last > last_usable) return PARTITION_BAD_GPT;
+        if (last >= device->sector_count) return PARTITION_BAD_GPT;
         if (table->count >= PARTITION_MAX) return PARTITION_TOO_MANY;
+
         partition_t *out = &table->entries[table->count++];
         zero_bytes(out, sizeof(*out));
         out->first_lba = first;
@@ -123,6 +164,29 @@ static partition_status_t parse_gpt(const block_device_t *device, partition_tabl
         copy16(out->unique_guid, entry + 16);
     }
     return PARTITION_OK;
+}
+
+static partition_status_t parse_gpt(const block_device_t *device, partition_table_t *table) {
+    if (read_sector(device, 1, sector_buffer) != PARTITION_OK) return PARTITION_IO_ERROR;
+
+    uint64_t first_usable = 0;
+    uint64_t last_usable = 0;
+    uint64_t entries_lba = 0;
+    uint32_t entry_count = 0;
+    uint32_t entry_size = 0;
+    uint32_t entries_crc = 0;
+
+    partition_status_t status = validate_gpt_header(
+        device, &first_usable, &last_usable, &entries_lba,
+        &entry_count, &entry_size, &entries_crc);
+    if (status != PARTITION_OK) return status;
+
+    status = load_gpt_entries(
+        device, entries_lba, entry_count, entry_size, entries_crc);
+    if (status != PARTITION_OK) return status;
+
+    return populate_gpt_table(
+        device, table, first_usable, last_usable, entry_count, entry_size);
 }
 
 partition_status_t partition_scan(const block_device_t *device, partition_table_t *table) {
