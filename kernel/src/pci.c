@@ -56,6 +56,16 @@ void pci_config_write16(uint8_t bus, uint8_t device,
     outl(PCI_CONFIG_DATA, current);
 }
 
+static void read_bars(uint8_t bus, uint8_t slot, uint8_t function,
+                      pci_device_t *out) {
+    for (uint8_t i = 0; i < 6; ++i) out->bars[i] = 0;
+    if ((out->header_type & PCI_HEADER_TYPE_MASK) != PCI_HEADER_NORMAL) return;
+    for (uint8_t i = 0; i < 6; ++i) {
+        out->bars[i] = pci_config_read32(
+            bus, slot, function, (uint8_t)(0x10u + i * 4u));
+    }
+}
+
 static int read_function(uint8_t bus, uint8_t slot, uint8_t function,
                          pci_device_t *out) {
     uint32_t id = pci_config_read32(bus, slot, function, 0x00);
@@ -78,33 +88,35 @@ static int read_function(uint8_t bus, uint8_t slot, uint8_t function,
     out->header_type = (uint8_t)(header >> 16);
     out->interrupt_line = (uint8_t)interrupt;
     out->interrupt_pin = (uint8_t)(interrupt >> 8);
-
-    for (uint8_t i = 0; i < 6; ++i) out->bars[i] = 0;
-    if ((out->header_type & PCI_HEADER_TYPE_MASK) == PCI_HEADER_NORMAL) {
-        for (uint8_t i = 0; i < 6; ++i) {
-            out->bars[i] = pci_config_read32(
-                bus, slot, function, (uint8_t)(0x10u + i * 4u));
-        }
-    }
+    read_bars(bus, slot, function, out);
     return 1;
+}
+
+static void append_device(const pci_device_t *device) {
+    if (device_count < PCI_MAX_DEVICES) devices[device_count++] = *device;
+}
+
+static void scan_extra_functions(uint8_t bus, uint8_t slot) {
+    for (uint8_t function = 1; function < 8u; ++function) {
+        pci_device_t found;
+        if (read_function(bus, slot, function, &found)) append_device(&found);
+    }
+}
+
+static void scan_slot(uint8_t bus, uint8_t slot) {
+    pci_device_t first;
+    if (!read_function(bus, slot, 0, &first)) return;
+    append_device(&first);
+    if ((first.header_type & PCI_HEADER_MULTIFUNCTION) != 0) {
+        scan_extra_functions(bus, slot);
+    }
 }
 
 void pci_init(void) {
     device_count = 0;
-
     for (uint16_t bus = 0; bus < 256u; ++bus) {
         for (uint8_t slot = 0; slot < 32u; ++slot) {
-            pci_device_t first;
-            if (!read_function((uint8_t)bus, slot, 0, &first)) continue;
-
-            if (device_count < PCI_MAX_DEVICES) devices[device_count++] = first;
-
-            if ((first.header_type & PCI_HEADER_MULTIFUNCTION) == 0) continue;
-            for (uint8_t function = 1; function < 8u; ++function) {
-                pci_device_t found;
-                if (!read_function((uint8_t)bus, slot, function, &found)) continue;
-                if (device_count < PCI_MAX_DEVICES) devices[device_count++] = found;
-            }
+            scan_slot((uint8_t)bus, slot);
         }
     }
 }
