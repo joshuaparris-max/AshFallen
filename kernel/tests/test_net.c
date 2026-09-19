@@ -110,6 +110,10 @@ int main(void) {
     test_device_send();
     test_loopback();
     test_capacity_and_arguments();
+    for (int status = NET_OK; status <= NET_DRIVER_ERROR; ++status) {
+        assert(net_status_string((net_status_t)status) != NULL);
+    }
+    assert(net_status_string((net_status_t)999) != NULL);
     puts("network device tests passed");
     return 0;
 }
