@@ -37,6 +37,7 @@ int paging_query(uint64_t virtual_address, paging_mapping_t *mapping);
 int paging_verify_kernel_layout(void);
 
 paging_status_t paging_create_user_address_space(paging_address_space_t *space_out);
+paging_status_t paging_destroy_user_address_space(paging_address_space_t *space);
 paging_status_t paging_map_user_page(const paging_address_space_t *space,
                                      uint64_t virtual_address,
                                      uint64_t physical_address,
