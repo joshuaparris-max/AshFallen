@@ -53,6 +53,16 @@ static int power_of_two(uint64_t value) {
     return value != 0 && (value & (value - 1u)) == 0;
 }
 
+static uint64_t page_down(uint64_t value) {
+    return value & ~UINT64_C(0xfff);
+}
+
+static int page_up(uint64_t value, uint64_t *out) {
+    if (!out || value > UINT64_MAX - UINT64_C(0xfff)) return 0;
+    *out = (value + UINT64_C(0xfff)) & ~UINT64_C(0xfff);
+    return 1;
+}
+
 static int user_range(uint64_t start, uint64_t length) {
     if (length == 0 || start < USER_ELF_VADDR_MIN ||
         start >= USER_ELF_VADDR_MAX || add_overflows(start, length)) {
@@ -185,7 +195,19 @@ user_elf_status_t user_elf_validate(const void *image,
                 return USER_ELF_BAD_SEGMENT;
             }
             uint64_t other_end = other->vaddr + other->memsz;
-            if (segment->vaddr < other_end && other->vaddr < end) {
+            uint64_t page_end;
+            uint64_t other_page_end;
+            if (!page_up(end, &page_end) || !page_up(other_end, &other_page_end)) {
+                return USER_ELF_BAD_SEGMENT;
+            }
+
+            /*
+             * x86 permissions apply to entire 4 KiB pages. Even byte-disjoint
+             * PT_LOAD ranges may not share a page, otherwise an RX segment and
+             * an RW segment could collapse into an effective W+X mapping.
+             */
+            if (page_down(segment->vaddr) < other_page_end &&
+                page_down(other->vaddr) < page_end) {
                 return USER_ELF_SEGMENT_OVERLAP;
             }
         }
