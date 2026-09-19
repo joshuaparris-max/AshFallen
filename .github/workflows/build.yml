@@ -47,6 +47,9 @@ jobs:
       - name: Exception fault smoke test
         run: make fault-smoke
 
+      - name: Ring 3 syscall smoke test
+        run: make ring3-smoke
+
       - name: Record checksum
         run: sha256sum JoshOS-0.1-x86_64.iso | tee JoshOS-0.1-x86_64.iso.sha256
 

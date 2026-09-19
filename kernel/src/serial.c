@@ -25,6 +25,15 @@ void serial_write(const char *text) {
     }
 }
 
+void serial_write_n(const char *text, uint64_t length) {
+    if (!text) return;
+    for (uint64_t i = 0; i < length; ++i) {
+        char ch = text[i];
+        if (ch == '\n') serial_putc('\r');
+        serial_putc(ch);
+    }
+}
+
 void serial_write_hex64(uint64_t value) {
     static const char digits[] = "0123456789ABCDEF";
     serial_write("0x");

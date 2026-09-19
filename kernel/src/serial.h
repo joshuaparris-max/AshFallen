@@ -5,6 +5,7 @@
 
 void serial_init(void);
 void serial_write(const char *text);
+void serial_write_n(const char *text, uint64_t length);
 void serial_write_hex64(uint64_t value);
 
 #endif
