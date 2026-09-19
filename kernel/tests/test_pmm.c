@@ -68,6 +68,10 @@ int main(void) {
     pmm_stats_t after = pmm_stats();
     expect("free count restored", after.free_frames == initial.free_frames);
     expect("no leaked frames", after.allocated_frames == 0);
+    for (int status = PMM_OK; status <= PMM_DOUBLE_FREE; ++status) {
+        expect("PMM status string", pmm_status_string((pmm_status_t)status) != NULL);
+    }
+    expect("unknown PMM status string", pmm_status_string((pmm_status_t)999) != NULL);
 
     if (failures) return 1;
     puts("physical memory allocator tests passed");
