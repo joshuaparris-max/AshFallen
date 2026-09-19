@@ -1,0 +1,8 @@
+NAME="Josh OS"
+PRETTY_NAME="Josh OS Stage 0 Live"
+ID=josh-os
+ID_LIKE=arch
+BUILD_ID=stage-0-live
+HOME_URL="https://github.com/joshuaparris-max/JoshOS"
+DOCUMENTATION_URL="https://github.com/joshuaparris-max/JoshOS"
+SUPPORT_URL="https://github.com/joshuaparris-max/JoshOS"
