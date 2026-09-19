@@ -72,6 +72,7 @@ HOST_TEST_NETDEV := obj-host/test_net
 HOST_TEST_SPINLOCK := obj-host/test_spinlock
 HOST_TEST_ACPI := obj-host/test_acpi
 HOST_TEST_APIC_ROUTE := obj-host/test_apic_route
+HOST_TEST_USER_ELF := obj-host/test_user_elf
 HOST_TEST_PCI := obj-host/test_pci
 HOST_TEST_INPUT := obj-host/test_input
 HOST_TEST_TIMER := obj-host/test_timer
@@ -79,7 +80,7 @@ HOST_TEST_KEYBOARD := obj-host/test_keyboard_decode
 HOST_TEST_SMP := obj-host/test_smp_topology
 HOST_TEST_STORAGE := obj-host/test_storage
 HOST_TEST_VFS := obj-host/test_vfs
-HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET) $(HOST_TEST_NETDEV) $(HOST_TEST_SPINLOCK) $(HOST_TEST_ACPI) $(HOST_TEST_APIC_ROUTE) $(HOST_TEST_PCI) $(HOST_TEST_INPUT) $(HOST_TEST_TIMER) $(HOST_TEST_KEYBOARD) $(HOST_TEST_SMP) $(HOST_TEST_STORAGE) $(HOST_TEST_VFS)
+HOST_TESTS := $(HOST_TEST_BOOT) $(HOST_TEST_PMM) $(HOST_TEST_CPU) $(HOST_TEST_HEAP) $(HOST_TEST_NET) $(HOST_TEST_NETDEV) $(HOST_TEST_SPINLOCK) $(HOST_TEST_ACPI) $(HOST_TEST_APIC_ROUTE) $(HOST_TEST_PCI) $(HOST_TEST_INPUT) $(HOST_TEST_TIMER) $(HOST_TEST_KEYBOARD) $(HOST_TEST_SMP) $(HOST_TEST_STORAGE) $(HOST_TEST_VFS) $(HOST_TEST_USER_ELF)
 
 .PHONY: all clean distclean host-tests
 all: bin/$(OUTPUT)
@@ -162,6 +163,10 @@ $(HOST_TEST_VFS): tests/test_vfs.c src/vfs.c src/vfs.h src/tmpfs.c src/tmpfs.h s
 	mkdir -p $(dir $@)
 	$(HOSTCC) $(HOST_CFLAGS) -I src tests/test_vfs.c src/vfs.c src/tmpfs.c src/storage_services.c -o $@
 
+$(HOST_TEST_USER_ELF): tests/test_user_elf.c src/user_elf.c src/user_elf.h
+	mkdir -p $(dir $@)
+	$(HOSTCC) -std=c11 -O2 -Wall -Wextra -Werror -I src tests/test_user_elf.c src/user_elf.c -o $@
+
 host-tests: $(HOST_TESTS)
 	$(HOST_TEST_BOOT)
 	$(HOST_TEST_PMM)
@@ -172,6 +177,7 @@ host-tests: $(HOST_TESTS)
 	$(HOST_TEST_SPINLOCK)
 	$(HOST_TEST_ACPI)
 	$(HOST_TEST_APIC_ROUTE)
+	$(HOST_TEST_USER_ELF)
 	$(HOST_TEST_PCI)
 	$(HOST_TEST_INPUT)
 	$(HOST_TEST_TIMER)
