@@ -66,6 +66,11 @@ int main(void) {
     expect("device read", device_service_read("sata0", buffer, sizeof(buffer), &read) == VFS_OK &&
            read == 5 && memcmp(buffer, "ready", 5) == 0);
 
+    for (int status = VFS_OK; status <= VFS_IO_ERROR; ++status) {
+        expect("VFS status string", vfs_status_string((vfs_status_t)status) != NULL);
+    }
+    expect("unknown VFS status string", vfs_status_string((vfs_status_t)999) != NULL);
+
     if (failures) return 1;
     puts("VFS, tmpfs, and storage service tests passed");
     return 0;
