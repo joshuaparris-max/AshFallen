@@ -6,6 +6,8 @@
 
 > **Green-language rule:** Never write “main is green” without naming the workflow and the run ID. Different workflows can disagree on the same main SHA.
 
+> **Publication note:** the branch-distance audit below is frozen against the named audit SHAs. Agent 1's subsequent documentation-only commits moved JoshBIOS main to `023ecf7` (normal `CI` run `35415855376` green) and canonical JoshOS main to `34cea48`; these documentation commits do not change the audited boot/kernel/product implementation.
+
 ## Decisions locked in this round
 
 - Canonical OS repository: `joshuaparris-max/JoshOS` (same repository that was previously named `joshuaparris-max/AshFallen`).
@@ -221,6 +223,8 @@ Only the three labels below are used.
 | Compaq 610 physical firmware/coreboot | **Not started** | Read-only/external-programmer preflight tooling exists, but no target capture, recovery proof or physical coreboot boot exists. |
 | Native kernel foundations | **Merged+green** | Native run `35411586180` verified scheduler, heap, PCI, E1000, ACPI/APIC/IOAPIC, SMP, timer, IRQ keyboard and `JOSHOS_BOOT_OK`. |
 | Native storage core/VFS services | **Merged+green** | Main contains block/cache/VFS/tmpfs/storage-service code; storage host run `35411583606` green. This does not mean AHCI/NVMe device I/O is merged. |
+| Native network primitives + e1000 bring-up | **Merged+green** | Native run `35411586180` requires `JOSHOS_E1000_OK` and loopback; host-tested Ethernet/ARP/IPv4/ICMP/UDP/DHCP/DNS/TCP wire primitives exist. A live DHCP/DNS/TCP stack is not claimed. |
+| Native live TCP/IP stack | **Not started** | No merged ARP cache/routing state, live UDP endpoints, DHCP state machine, resolver transport or TCP connection state machine. |
 | Native AHCI/NVMe disk I/O | **Implemented-unverified** | Work exists only on stale storage branches; must be re-cut. |
 | Ring 3/process isolation/syscalls | **Implemented-unverified** | #26 green on its head but currently non-mergeable/behind current main. |
 | Userspace ELF validation | **Implemented-unverified** | #27 green on its head but currently non-mergeable/behind current main. |
@@ -261,10 +265,12 @@ This section is authoritative until those documents are edited.
 | Document/claim | Ground truth | Fix |
 |---|---|---|
 | Stage0 README/roadmaps point at `joshuaparris-max/AshFallen` as canonical | Repository ID `1211047010` is now named `joshuaparris-max/JoshOS` | Replace old canonical links/names; do not confuse with unrelated `joshualparris/AshFallen` |
+| JoshOS README says the native build lacks filesystem/networking wholesale | Main now contains tested block/cache/VFS/tmpfs services, e1000 bring-up and host-tested network wire primitives | Replace the blanket wording with the real boundary: no integrated AHCI/NVMe filesystem persistence and no live DHCP/DNS/TCP stack yet |
 | JoshOS README says JoshBootloader UEFI is scaffold-only | Full OVMF loader path was implemented and integration-tested to canonical kernel `JOSHOS_BOOT_OK` | Say UEFI is QEMU/OVMF integration-tested; physical UEFI remains unverified |
 | JoshBIOS README says UEFI only emits `JOSHUEFI_ENTRY_OK` and does not load JoshOS | Same stale limitation | Update to current OVMF ELF/GOP/memory-map/ExitBootServices/Josh Boot Protocol handoff evidence |
 | JoshBIOS ROADMAP and BOOTLOADER_ROADMAP leave UEFI adapter/memory map/ExitBootServices unchecked or call entry-only | Stale after the UEFI integration work | Mark QEMU/OVMF pieces tested; leave physical UEFI/support unchecked |
 | Stage0 roadmap leaves automated QEMU boot smoke unchecked | PR #4 now has a green real-ISO QEMU smoke and is merged; post-merge main run is the final gate | Mark complete only after the named main run is green |
+| Stage0 `compositor/README.md` frames Smithay-vs-wlroots as the immediate Stage0 compositor choice | ADR 0002 selects labwc for the Linux-backed Stage0 session; the future Josh-owned native compositor remains a separate decision | Mark the Stage0 compositor plan as superseded for the Linux product path; keep native-compositor research in canonical JoshOS |
 | Stage0 ISO/README presents Chromium/Openbox as the forward browser/session choice | It describes current implementation, but ADR 0002 and 0004 supersede it as architecture | Label it legacy compatibility implementation pending labwc + Firefox migration |
 | JoshOS product roadmap says compositor toolkit/base should still be spiked before choosing | Stage0 decision is labwc/wlroots for the Linux-backed session; final native Josh compositor is still undecided | Split Stage0 integration choice from future native-compositor choice |
 | Earlier integration report said #26/#27 were 12 behind and mergeable | Main advanced during this round; they are now 17 behind and GitHub reports non-mergeable | Keep them as nearest green candidates, but refresh/re-cut before merge |
