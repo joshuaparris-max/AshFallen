@@ -196,6 +196,10 @@ int main(void) {
     test_rsdt_fallback();
     test_bad_checksum();
     test_bad_entry_length();
+    for (int status = ACPI_OK; status <= ACPI_TOO_MANY_ENTRIES; ++status) {
+        expect("ACPI status string", acpi_status_string((acpi_status_t)status) != NULL);
+    }
+    expect("unknown ACPI status string", acpi_status_string((acpi_status_t)999) != NULL);
 
     if (failures) return 1;
     puts("ACPI MADT parser tests passed");
