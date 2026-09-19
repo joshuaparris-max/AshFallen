@@ -30,6 +30,7 @@ VBoxClient --vmsvga >/tmp/josh-os-vbox-vmsvga.log 2>&1 &
 VBoxClient --clipboard >/tmp/josh-os-vbox-clipboard.log 2>&1 &
 
 openbox >/tmp/josh-os-openbox.log 2>&1 &
+sxhkd >/tmp/josh-os-sxhkd.log 2>&1 &
 sleep 0.5
 
 run_shell() {
