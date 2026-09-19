@@ -72,10 +72,12 @@ Workflow truth:
 |---|---|---:|---|
 | Native-kernel content at `db3abd5b6643` (unchanged by later docs/shell/ISO commits at this snapshot) | `Build Josh OS Native Kernel` | `35411586180` | **green** — requires scheduler, heap, PCI, E1000, ACPI/APIC/IOAPIC/SMP/timer/keyboard and `JOSHOS_BOOT_OK` |
 | Storage-core content at `5d49afaee799` | `Native Storage Core Tests` | `35411583606` | **green** |
-| `6d25431af643` | `Build Josh OS Product ISO` | `35415431739` | **in progress** |
+| `6d25431af643` | `Build Josh OS Product ISO` | `35415431739` | **red** — product browser pass 1 timed out before browser readiness markers |
 | `90fe0f5fac7d` | `Build Josh OS Product ISO` | `35414499841` | **red** — two-boot browser smoke timed out before product browser markers |
 
 Therefore “JoshOS main is green” is ambiguous and prohibited.
+
+Latest product ISO evidence: run `35415431739` completed **red** after the ISO built successfully but `scripts/smoke-product-browser.sh` timed out on pass 1 while serial output was still at the BIOS live-image boot/kernel-load boundary. Treat the Linux product/browser path as **Implemented-unverified**, not merged+green.
 
 #### Open PRs
 
