@@ -40,8 +40,8 @@ static void expect(const char *name, int condition) {
     }
 }
 
-static void make_valid(uint8_t image[4096]) {
-    memset(image, 0, 4096);
+static void make_valid(uint8_t image[8192]) {
+    memset(image, 0, 8192);
     ehdr_t *h = (ehdr_t *)image;
     h->ident[0] = 0x7f;
     h->ident[1] = 'E';
@@ -78,7 +78,7 @@ static void make_valid(uint8_t image[4096]) {
 }
 
 int main(void) {
-    uint8_t image[4096];
+    uint8_t image[8192];
     user_elf_plan_t plan;
     user_elf_segment_t segment;
 
@@ -118,6 +118,16 @@ int main(void) {
     p[1].vaddr = p[0].vaddr + 8;
     p[1].align = 1;
     expect("overlap rejected",
+           user_elf_validate(image, sizeof(image), &plan) == USER_ELF_SEGMENT_OVERLAP);
+
+    make_valid(image);
+    p = (phdr_t *)(image + ((ehdr_t *)image)->phoff);
+    p[0].filesz = 0x100;
+    p[0].memsz = 0x100;
+    p[0].align = 1;
+    p[1].vaddr = p[0].vaddr + 0x800;
+    p[1].align = 1;
+    expect("shared page rejected",
            user_elf_validate(image, sizeof(image), &plan) == USER_ELF_SEGMENT_OVERLAP);
 
     make_valid(image);
