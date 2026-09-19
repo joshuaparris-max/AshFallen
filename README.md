@@ -146,6 +146,8 @@ The Stage 0 product ISO is intentionally a compatibility vehicle: ArchISO + Ligh
 
 ## Documentation
 
+- **[Integration ground truth / shared project status](docs/PROJECT_STATUS.md)** — authoritative repo/CI/branch status, ownership, corrections and merge order for all agents.
+
 - [Full-stack programming plan](docs/FULL_STACK_PROGRAMMING_PLAN.md) — 37 phases from power-button policy through firmware, kernel, userspace, desktop and applications.
 - [Difficulty, scope and feasibility](docs/DIFFICULTY_SCOPE_AND_FEASIBILITY.md) — tractable vs brutal vs blocked work, missing architectural programmes, and realistic completion definitions.
 - [Roadmap](ROADMAP.md)
