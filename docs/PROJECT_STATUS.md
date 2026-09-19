@@ -146,6 +146,7 @@ PR #3 (real Wayland session ADR) was subsequently green on branch run
 
 | PR | Branch | Head | Ahead/behind main | Head CI | Applies cleanly? | Disposition |
 |---|---|---:|---:|---|---|---|
+| #6 | `integration/locked-decisions` | `6a6ef725e952` | +1 / -0 | in progress (`35415911731`) | Yes (`mergeable=true`) | Integration docs only; merge after green head run |
 | #5 | `feature/repo-rename-joshos` | `10402a8ca173` | +6 / -6 | green (`35414107536`) | No (`mergeable=false`) | Re-cut docs-only rename pieces after ADR/status integration; do not merge wholesale |
 
 #### Agent branches without open PRs
@@ -281,7 +282,7 @@ This section is authoritative until those documents are edited.
 
 1. **Stage0 PR #4 matcher/harness** — merged and post-merge green (`Build Josh OS ISO` run `35413957824`).
 2. **Stage0 ADR #3 / real-Wayland decision** — merged as `ac0cee4`; post-merge `Build Josh OS ISO` run `35415425150` is green.
-3. **Stage0 ADR integration commit** — after that run is green, make ADR numbering unique: 0002 real Wayland, 0003 low-spec Gen5, 0004 Firefox, 0005 design tokens. No feature code.
+3. **Stage0 ADR integration PR #6** — prepared at `6a6ef72`; ADR numbering is unique (0002 real Wayland, 0003 low-spec Gen5, 0004 Firefox, 0005 design tokens). Head run `35415911731` must be green before merge. No feature code.
 4. **Shared status document + README links** — land this document in canonical JoshOS and link it from all three READMEs.
 5. **Stage0 repo-rename PR #5** — because it overlaps README/roadmap/build-script text, re-cut it on top of the integration/doc commits rather than racing those files.
 6. **JoshOS #26 and #27** — refresh separately from current main. They are the nearest green candidates. #26 and `agent/process-runtime` collide heavily; one Process/Userspace Owner must integrate them serially. #27 is mostly isolated to the userspace ELF parser but should be coordinated with the same owner because `agent/process-runtime` contains a competing copy.
