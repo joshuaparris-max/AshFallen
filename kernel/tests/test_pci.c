@@ -49,6 +49,10 @@ int main(void) {
     test_config_address();
     test_memory_bar();
     test_invalid_bars();
+    for (int status = PCI_OK; status <= PCI_UNSUPPORTED_BAR; ++status) {
+        assert(pci_status_string((pci_status_t)status) != NULL);
+    }
+    assert(pci_status_string((pci_status_t)999) != NULL);
     puts("PCI helper tests passed");
     return 0;
 }
