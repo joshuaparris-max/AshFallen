@@ -65,6 +65,10 @@ int main(void) {
     pool_used = 0;
     expect("reset", heap_init(test_grow, 0) == HEAP_OK);
     expect("self test", heap_self_test());
+    for (int status = HEAP_OK; status <= HEAP_CORRUPT; ++status) {
+        expect("heap status string", heap_status_string((heap_status_t)status) != NULL);
+    }
+    expect("unknown heap status string", heap_status_string((heap_status_t)999) != NULL);
 
     if (failures) return 1;
     puts("heap allocator tests passed");
