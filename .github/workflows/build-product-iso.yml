@@ -52,6 +52,7 @@ jobs:
           bash -n iso/overlay/usr/local/bin/josh-wifi
           bash -n iso/overlay/usr/local/bin/josh-network-acceptance
           python -m py_compile iso/overlay/usr/local/lib/josh-os/network-control.py
+          python -m unittest discover -s iso/tests -p 'test_*.py'
           grep -q "/api/network/status" shell/apps.js
           bash -n iso/overlay/usr/local/lib/josh-os/prepare-persistent-home
           bash -n iso/overlay/usr/local/lib/josh-os/browser-ready-probe
