@@ -157,6 +157,11 @@ int main(void) {
     backend_writes = 0;
     expect("cache write-through", block_cache_write(&cache, &device, 7, sector) == BLOCK_OK &&
            backend_writes == 1 && disk[7 * SECTOR_SIZE] == 0x44);
+    block_cache_invalidate(&cache, &device);
+    backend_reads = 0;
+    memset(sector, 0, sizeof(sector));
+    expect("cache invalidation forces miss", block_cache_read(&cache, &device, 7, sector) == BLOCK_OK &&
+           backend_reads == 1 && cache.misses == 2);
     int flush_before = flushes;
     expect("cache flush", block_cache_flush(&cache, &device) == BLOCK_OK &&
            flushes == flush_before + 1);
@@ -181,6 +186,15 @@ int main(void) {
     make_gpt();
     disk[2 * SECTOR_SIZE + 64] ^= 1;
     expect("GPT entries CRC rejected", partition_scan(&device, &table) == PARTITION_BAD_GPT);
+
+    for (int status = BLOCK_OK; status <= BLOCK_REGISTRY_FULL; ++status) {
+        expect("block status string", block_status_string((block_status_t)status) != NULL);
+    }
+    expect("unknown block status string", block_status_string((block_status_t)999) != NULL);
+    for (int status = PARTITION_OK; status <= PARTITION_TOO_MANY; ++status) {
+        expect("partition status string", partition_status_string((partition_status_t)status) != NULL);
+    }
+    expect("unknown partition status string", partition_status_string((partition_status_t)999) != NULL);
 
     if (failures) return 1;
     puts("Block and partition tests passed");
