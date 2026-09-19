@@ -40,6 +40,7 @@ int cpu_enable_nx(const cpu_features_t *features);
 uint64_t cpu_read_msr(uint32_t msr);
 void cpu_write_msr(uint32_t msr, uint64_t value);
 uint64_t cpu_read_cr3(void);
+void cpu_write_cr3(uint64_t root_phys);
 uint64_t cpu_read_tsc(void);
 
 #endif
